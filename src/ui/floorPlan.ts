@@ -40,9 +40,6 @@ export type FloorPlan = {
 export function generateFloorPlan(_floor: number): FloorPlan {
   const bounds = { w: 12, h: 10 };
 
-  // 目标：只生成 `map.png` 中“加粗的灰色墙体”作为 3D 框架。
-  // - 不再渲染标注用的细线或分区线
-  // - 门、窗位置通过“打断墙段”来保留空隙（不再额外生成门窗几何）
   const T = 0.02; // thicker than before: closer to grey bold walls
   const H = 3.0;
 

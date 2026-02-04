@@ -140,7 +140,7 @@ export function App() {
             <div className="wm-brand-mark" aria-hidden />
             <div className="wm-brand-text">
               <div className="wm-brand-title">Map Demo</div>
-              <div className="wm-brand-sub">Leaflet × Three.js × DnD</div>
+              <div className="wm-brand-sub">高德地图 × Three.js × DnD</div>
             </div>
           </div>
 
