@@ -7,6 +7,7 @@ import { OutdoorMap } from './OutdoorMap';
 import { DevicePalette, type DeviceKind } from './DevicePalette';
 import { Segmented } from './Segmented';
 import type { Building, DevicePlacement, ViewMode } from './types';
+import type { FloorPlan } from './floorPlan';
 import { clamp01 } from './utils/clamp';
 
 const DEFAULT_BUILDING: Building = {
@@ -37,6 +38,10 @@ export function App() {
   const [floor, setFloor] = useState<number>(1);
   const [selectedIndoorPoint, setSelectedIndoorPoint] = useState<{ nx: number; ny: number } | null>(null);
   const [devices, setDevices] = useState<DevicePlacement[]>([]);
+  const [floorPlanByFloor, setFloorPlanByFloor] = useState<Record<number, FloorPlan | null>>({});
+  const [floorPlanLoading, setFloorPlanLoading] = useState(false);
+  const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
+  const [floorPlanPipeline, setFloorPlanPipeline] = useState<Record<string, unknown> | null>(null);
 
   const dropRef = useRef<HTMLDivElement | null>(null);
   const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
@@ -69,6 +74,42 @@ export function App() {
     setSelectedBuilding(b);
     setMode('indoor2d');
   }, []);
+
+  const handleGenerate3D = useCallback(
+    async (floorNum: number) => {
+      setFloorPlanError(null);
+      setFloorPlanPipeline(null);
+      setFloorPlanLoading(true);
+      try {
+        const res = await fetch('/map.png');
+        const blob = await res.blob();
+        const form = new FormData();
+        form.append('file', blob, 'map.png');
+        form.append('buildingId', selectedBuilding?.id ?? 'default');
+        form.append('floorId', String(floorNum));
+        const apiRes = await fetch('/api/floor-plan/from-image', {
+          method: 'POST',
+          body: form,
+        });
+        const data = await apiRes.json().catch(() => null);
+        setFloorPlanPipeline(data?.pipeline ?? null);
+
+        if (!apiRes.ok) {
+          const err = data ?? { error: apiRes.statusText };
+          throw new Error(err.error ?? err.detail ?? '生成失败');
+        }
+        const plan = data.floorPlan ?? data;
+        setFloorPlanByFloor((prev) => ({ ...prev, [floorNum]: plan }));
+        setMode('indoor3d');
+      } catch (e) {
+        setFloorPlanError(e instanceof Error ? e.message : '生成 3D 失败');
+        setFloorPlanPipeline(null);
+      } finally {
+        setFloorPlanLoading(false);
+      }
+    },
+    [selectedBuilding?.id],
+  );
 
   const placeDeviceAt = useCallback(
     (kind: DeviceKind, nx: number, ny: number) => {
@@ -223,6 +264,10 @@ export function App() {
                   devices={devices}
                   onPickPoint={(p) => setSelectedIndoorPoint(p)}
                   onEnter3D={() => setMode('indoor3d')}
+                  onGenerate3D={handleGenerate3D}
+                  generate3DLoading={floorPlanLoading}
+                  generate3DError={floorPlanError}
+                  pipeline={floorPlanPipeline}
                   registerDropMapper={(fn) => {
                     dropMapperRef.current = fn;
                   }}
@@ -233,6 +278,7 @@ export function App() {
                   building={selectedBuilding ?? DEFAULT_BUILDING}
                   floor={floor}
                   devices={devices}
+                  plan={floorPlanByFloor[floor] ?? null}
                   selectedPoint={selectedIndoorPoint}
                   onBackTo2D={() => setMode('indoor2d')}
                   registerDropMapper={(fn) => {

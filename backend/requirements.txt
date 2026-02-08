@@ -1,0 +1,28 @@
+# Core API
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# 图像：Pillow + OpenCV 做墙线检测（主），模型/LLM 仅作补充
+# 若安装 OpenCV 时卡在 Building wheel，请用 Python 3.11 或 3.12 创建 venv（有预编译 wheel）
+Pillow>=10.0.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+
+# 可选：布局区域检测（会拉取 PyTorch，安装慢可先不装）
+# layoutparser>=0.3.4
+# 可选：备用墙线检测（与 OpenCV 二选一即可）
+# scikit-image>=0.21.0
+
+# LLM & LangChain
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-community>=0.0.20
+openai>=1.12.0  # GLM uses OpenAI-compatible API
+
+# HTTP client
+httpx>=0.26.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.5.0

@@ -436,6 +436,16 @@ body {
   gap: 10px;
 }
 
+.wm-indoor2d-error {
+  padding: 8px 12px;
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--wm-danger);
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  border-radius: 8px;
+}
+
 .wm-indoor2d-canvas {
   flex: 1;
   position: relative;

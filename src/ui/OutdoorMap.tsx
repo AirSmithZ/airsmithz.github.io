@@ -1,7 +1,6 @@
 /// <reference path="../amap.d.ts" />
 import { useEffect, useMemo, useRef, useState } from 'react';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- types from src/amap.d.ts when pkg not installed
-// @ts-expect-error module may be unresolved until pnpm install
 import AMapLoader from '@amap/amap-jsapi-loader';
 
 import type { Building, LatLng } from './types';

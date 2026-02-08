@@ -4,7 +4,7 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Building, DevicePlacement } from './types';
-import { generateFloorPlan } from './floorPlan';
+import type { FloorPlan } from './floorPlan';
 
 const WALL_COLOR = '#2a3a63';
 const FLOOR_COLOR = '#0b1225';
@@ -24,7 +24,7 @@ function FloorPlane(props: { bounds: { w: number; h: number } }) {
   );
 }
 
-function WallMesh(props: { bounds: { w: number; h: number }; wall: ReturnType<typeof generateFloorPlan>['walls'][number] }) {
+function WallMesh(props: { bounds: { w: number; h: number }; wall: FloorPlan['walls'][number] }) {
   const { wall, bounds } = props;
   const a = nToWorld(bounds, wall.x1, wall.y1);
   const b = nToWorld(bounds, wall.x2, wall.y2);
@@ -77,10 +77,9 @@ function DragDropMapper(props: {
   return null;
 }
 
-function DeviceMesh(props: { d: DevicePlacement }) {
-  // map normalized [0..1] into plane [-5..5]
-  const x = (props.d.nx - 0.5) * 10;
-  const z = (0.5 - props.d.ny) * 10;
+function DeviceMesh(props: { bounds: { w: number; h: number }; d: DevicePlacement }) {
+  const x = (props.d.nx - 0.5) * props.bounds.w;
+  const z = (0.5 - props.d.ny) * props.bounds.h;
 
   const color = props.d.kind === 'camera' ? '#22c55e' : props.d.kind === 'sensor' ? '#60a5fa' : '#f59e0b';
 
@@ -100,9 +99,9 @@ function DeviceMesh(props: { d: DevicePlacement }) {
   );
 }
 
-function SelectedMarker(props: { p: { nx: number; ny: number } }) {
-  const x = (props.p.nx - 0.5) * 10;
-  const z = (0.5 - props.p.ny) * 10;
+function SelectedMarker(props: { bounds: { w: number; h: number }; p: { nx: number; ny: number } }) {
+  const x = (props.p.nx - 0.5) * props.bounds.w;
+  const z = (0.5 - props.p.ny) * props.bounds.h;
   return (
     <group position={[x, 0.01, z]}>
       <mesh rotation-x={-Math.PI / 2}>
@@ -113,16 +112,24 @@ function SelectedMarker(props: { p: { nx: number; ny: number } }) {
   );
 }
 
+const EMPTY_PLAN: FloorPlan = {
+  bounds: { w: 12, h: 10 },
+  walls: [],
+  openings: [],
+  furniture: [],
+};
+
 export function Indoor3D(props: {
   building: Building;
   floor: number;
   devices: DevicePlacement[];
+  plan: FloorPlan | null;
   selectedPoint: { nx: number; ny: number } | null;
   onBackTo2D: () => void;
   registerDropMapper: (fn: ((client: { x: number; y: number }) => { nx: number; ny: number }) | null) => void;
 }) {
   const devicesOnFloor = useMemo(() => props.devices.filter((d) => d.floor === props.floor), [props.devices, props.floor]);
-  const plan = useMemo(() => generateFloorPlan(props.floor), [props.floor]);
+  const plan = props.plan ?? EMPTY_PLAN;
 
   return (
     <div className="wm-indoor3d">
@@ -163,10 +170,10 @@ export function Indoor3D(props: {
           ))}
 
           {devicesOnFloor.map((d) => (
-            <DeviceMesh key={d.id} d={d} />
+            <DeviceMesh key={d.id} bounds={plan.bounds} d={d} />
           ))}
 
-          {props.selectedPoint ? <SelectedMarker p={props.selectedPoint} /> : null}
+          {props.selectedPoint ? <SelectedMarker bounds={plan.bounds} p={props.selectedPoint} /> : null}
 
           <gridHelper args={[plan.bounds.w, plan.bounds.w, '#22314f', '#121a2c']} position={[0, 0.001, 0]} />
           <OrbitControls makeDefault minDistance={5} maxDistance={18} maxPolarAngle={Math.PI * 0.49} />
