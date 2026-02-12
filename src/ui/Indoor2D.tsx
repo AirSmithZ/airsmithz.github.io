@@ -1,6 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Building, DevicePlacement } from './types';
+
+/** 平面图元素分类 API 返回（与 backend generate_2d_map 一致） */
+export type FloorPlanElements = {
+  walls: number[][][];
+  doors?: number[][][];
+  windows?: number[][][];
+  stairs?: number[][][];
+  columns?: number[][][];
+  furniture: number[][][];
+  zones: number[][][];
+  annotations: number[][][];
+  image_size: [number, number];
+};
 
 type PipelineStage = {
   status: string;
@@ -37,8 +50,33 @@ export function Indoor2D(props: {
   registerDropMapper: (fn: ((client: { x: number; y: number }) => { nx: number; ny: number }) | null) => void;
 }) {
   const [showPipeline, setShowPipeline] = useState(false);
+  const [elements, setElements] = useState<FloorPlanElements | null>(null);
+  const [elementsLoading, setElementsLoading] = useState(false);
+  const [elementsError, setElementsError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleParseElements = useCallback(async () => {
+    setElementsError(null);
+    setElementsLoading(true);
+    try {
+      const res = await fetch('/map.png');
+      const blob = await res.blob();
+      const form = new FormData();
+      form.append('file', blob, 'map.png');
+      const apiRes = await fetch('/api/floor-plan/elements', { method: 'POST', body: form });
+      const data = await apiRes.json().catch(() => null);
+      if (!apiRes.ok) {
+        throw new Error(data?.detail ?? data?.error ?? '解析失败');
+      }
+      setElements(data);
+    } catch (e) {
+      setElementsError(e instanceof Error ? e.message : '解析平面图元素失败');
+      setElements(null);
+    } finally {
+      setElementsLoading(false);
+    }
+  }, []);
 
   const floorLabel = `${props.floor}F`;
   const devicesOnFloor = useMemo(() => props.devices.filter((d) => d.floor === props.floor), [props.devices, props.floor]);
@@ -78,12 +116,25 @@ export function Indoor2D(props: {
           <button className="wm-btn wm-btn-ghost" onClick={props.onEnter3D} title="进入已生成的 3D 视图">
             进入 3D
           </button>
+          <button
+            className="wm-btn wm-btn-ghost"
+            onClick={handleParseElements}
+            disabled={elementsLoading}
+            title="用 OpenCV 解析平面图：墙体、标注、家具、区域，并渲染到地图上"
+          >
+            {elementsLoading ? '解析中…' : '解析平面图元素'}
+          </button>
         </div>
       </div>
 
       {props.generate3DError ? (
         <div className="wm-indoor2d-error" role="alert">
           {props.generate3DError}
+        </div>
+      ) : null}
+      {elementsError ? (
+        <div className="wm-indoor2d-error" role="alert">
+          {elementsError}
         </div>
       ) : null}
       {props.pipeline ? (
@@ -132,6 +183,87 @@ export function Indoor2D(props: {
         <img ref={imgRef} className="wm-indoor2d-img" src="/map.png" alt="Indoor layout" draggable={false} />
 
         <div className="wm-indoor2d-overlay">
+          {elements ? (
+            <svg
+              className="wm-indoor2d-elements-svg"
+              viewBox="0 0 1 1"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+            >
+              {(elements.zones ?? []).map((poly, i) => (
+                <polygon
+                  key={`z-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(96, 165, 250, 0.12)"
+                  stroke="rgba(96, 165, 250, 0.5)"
+                  strokeWidth={0.002}
+                />
+              ))}
+              {(elements.columns ?? []).map((poly, i) => (
+                <polygon
+                  key={`c-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(107, 114, 128, 0.4)"
+                  stroke="rgba(107, 114, 128, 0.9)"
+                  strokeWidth={0.003}
+                />
+              ))}
+              {(elements.stairs ?? []).map((poly, i) => (
+                <polygon
+                  key={`s-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(168, 85, 247, 0.2)"
+                  stroke="rgba(168, 85, 247, 0.9)"
+                  strokeWidth={0.003}
+                />
+              ))}
+              {(elements.furniture ?? []).map((poly, i) => (
+                <polygon
+                  key={`f-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(34, 197, 94, 0.2)"
+                  stroke="rgba(34, 197, 94, 0.8)"
+                  strokeWidth={0.003}
+                />
+              ))}
+              {(elements.walls ?? []).map((poly, i) => (
+                <polygon
+                  key={`w-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(59, 130, 246, 0.25)"
+                  stroke="rgba(59, 130, 246, 0.95)"
+                  strokeWidth={0.004}
+                />
+              ))}
+              {(elements.windows ?? []).map((poly, i) => (
+                <polygon
+                  key={`win-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(6, 182, 212, 0.15)"
+                  stroke="rgba(6, 182, 212, 0.9)"
+                  strokeWidth={0.003}
+                />
+              ))}
+              {(elements.doors ?? []).map((poly, i) => (
+                <polygon
+                  key={`d-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(245, 158, 11, 0.2)"
+                  stroke="rgba(245, 158, 11, 0.95)"
+                  strokeWidth={0.003}
+                />
+              ))}
+              {(elements.annotations ?? []).map((poly, i) => (
+                <polygon
+                  key={`a-${i}`}
+                  points={poly.map(([x, y]) => `${x},${y}`).join(' ')}
+                  fill="rgba(148, 163, 184, 0.2)"
+                  stroke="rgb(244, 23, 11)"
+                  strokeWidth={0.002}
+                />
+              ))}
+            </svg>
+          ) : null}
           {devicesOnFloor.map((d) => (
             <div
               key={d.id}

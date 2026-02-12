@@ -22,6 +22,9 @@ load_dotenv(_BACKEND / ".env")
 
 from backend.schemas.floor_plan import FloorPlan
 from backend.services.orchestrator import run_pipeline
+from backend.skills.generate_2d_map import classify_floor_plan_elements
+import numpy as np
+import cv2
 
 # 内存存储（可改为 Redis/DB）
 _plans: dict[str, FloorPlan] = {}
@@ -91,6 +94,33 @@ async def get_floor_plan(
         raise HTTPException(404, "FloorPlan not found")
     plan = _plans[key]
     return plan.to_frontend_dict()
+
+
+@app.post("/api/floor-plan/elements")
+async def classify_elements(file: UploadFile = File(...)) -> dict:
+    """
+    上传平面图 PNG/JPG，返回 OpenCV 分类结果：墙体、标注、家具、区域（归一化多边形）。
+    供前端 2D 地图按类型分色渲染。
+    """
+    if not file.filename or not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+        raise HTTPException(400, "只支持 PNG/JPG 图片")
+    content = await file.read()
+    arr = np.frombuffer(content, dtype=np.uint8)
+    img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(400, "图片解码失败")
+    result = classify_floor_plan_elements(img, annotation_boxes_px=None)
+    return {
+        "walls": result["walls"],
+        "doors": result.get("doors", []),
+        "windows": result.get("windows", []),
+        "stairs": result.get("stairs", []),
+        "columns": result.get("columns", []),
+        "furniture": result["furniture"],
+        "zones": result["zones"],
+        "annotations": result["annotations"],
+        "image_size": result["image_size"],
+    }
 
 
 @app.get("/api/health")
