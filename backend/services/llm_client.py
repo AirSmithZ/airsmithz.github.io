@@ -121,3 +121,140 @@ def call_glm_vision(
     elif isinstance(content, str):
         print(f"[LLM-Vision] 响应长度={len(content)} 前200字={content[:200]!r}")
     return content if isinstance(content, str) else None
+
+
+# 墙体识别配置的 schema 键（与 wall_detection_config.WALL_DETECTION_CONFIG 一致）
+WALL_CONFIG_KEYS = [
+    "grey_wall_lo", "grey_wall_hi", "grey_channel_diff_max",
+    "red_min", "red_over_g", "red_over_b",
+    "wall_max_thin_ratio", "wall_min_thickness_px",
+    "min_wall_area_abs", "min_wall_area_ratio",
+    "grey_white_ratio_use_fallback", "low_sat_channel_diff", "grey_white_ratio_use_otsu",
+    "morph_open_size", "morph_close_size_min", "morph_close_size_max", "kernel_size_divisor",
+    "fallback_min_area_abs", "fallback_min_area_ratio", "fallback_max_thin_ratio", "fallback_min_thickness_px",
+    "grey_ratio_secondary",
+]
+
+
+def _default_wall_config_json() -> str:
+    """与 wall_detection_config.WALL_DETECTION_CONFIG 内容一致的默认 JSON，用于提示词模板。"""
+    from backend.skills.wall_detection_config import WALL_DETECTION_CONFIG
+    return json.dumps(WALL_DETECTION_CONFIG, ensure_ascii=False)
+
+
+def call_glm_vision_wall_config(base64_image: str) -> dict | None:
+    """
+    用视觉模型分析平面图，输出墙体识别参数（与 wall_detection_config 格式一致）。
+    仅返回可用的配置 dict；解析失败或未配置 API 时返回 None。
+    """
+    api_key = os.getenv("GLM_API_KEY") or os.getenv("OPENAPI_API_KEY")
+    base_url = os.getenv("GLM_BASE_URL", "https://open.bigmodel.cn/api/paas/v4")
+    if not api_key:
+        print("[LLM-WallConfig] 未设置 GLM_API_KEY/OPENAPI_API_KEY，跳过")
+        return None
+
+    default_json = _default_wall_config_json()
+    prompt = f"""你正在为「建筑平面图墙体线自动识别」算法调参。流程：灰/黑二值化 → 排除红色（楼梯、红框）→ 形态学 → 轮廓 → 按面积与线厚筛出墙体。
+
+请观察本图后，输出**完整**的墙体识别配置 JSON：必须包含下面默认配置中的**全部键**，且键名、键数量完全一致；仅根据本图需要调整的项修改数值，其余保持默认值。不得只输出部分键。
+
+默认配置（你需要在输出中保留全部键，只改需要调整的值）：
+{default_json}
+
+调参建议：墙线偏细→提高 wall_max_thin_ratio 或降低 wall_min_thickness_px；图中有明显红标注/楼梯→提高 red_min；墙线断点多→略增 morph_close_size_min/max。
+
+只输出一行完整 JSON 对象，不要 markdown、不要 ```、不要任何前后文字。"""
+
+    b64 = base64_image.strip().replace("\n", "").replace("\r", "")
+    if b64.startswith("data:"):
+        b64 = b64.split(",", 1)[-1]
+    use_data_uri = os.getenv("GLM_IMAGE_DATA_URI", "0") == "1"
+    image_url = f"data:image/png;base64,{b64}" if use_data_uri else b64
+    model = os.getenv("GLM_VISION_MODEL", "glm-4.5v")
+    body = {
+        "model": model,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ],
+        "max_tokens": 2048,
+    }
+    url = f"{base_url.rstrip('/')}/chat/completions"
+    if httpx:
+        try:
+            with httpx.Client(timeout=60.0) as client:
+                r = client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=body,
+                )
+        except Exception as e:
+            print(f"[LLM-WallConfig] 请求异常: {e}")
+            return None
+        if not r.is_success:
+            print(f"[LLM-WallConfig] 请求失败 status={r.status_code} body={r.text[:300]}")
+            return None
+        data = r.json()
+    else:
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(body).encode(),
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                data = json.loads(resp.read().decode())
+        except Exception as e:
+            print(f"[LLM-WallConfig] 请求异常: {e}")
+            return None
+
+    msg = data.get("choices", [{}])[0].get("message", {})
+    content = msg.get("content")
+    if isinstance(content, list):
+        text_parts = [p.get("text", "") for p in content if isinstance(p, dict) and p.get("type") == "text"]
+        content = text_parts[0] if text_parts else None
+    if not content or not isinstance(content, str):
+        return None
+    text = content.strip()
+    print(f"[LLM-WallConfig] 原始输出（长度={len(text)}）:\n{text[:1500]}{'...' if len(text) > 1500 else ''}")
+
+    # 允许被 ```json ... ``` 包裹
+    if "```" in text:
+        for part in text.split("```"):
+            part = part.strip()
+            if part.startswith("json"):
+                part = part[4:].strip()
+            if part.startswith("{"):
+                text = part
+                break
+    try:
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            return None
+        from backend.skills.wall_detection_config import WALL_DETECTION_CONFIG
+        # 合法键且为数字的用 LLM 值，缺键用默认，保证输出与 wall_detection_config 结构一致
+        out = {}
+        for k in WALL_CONFIG_KEYS:
+            if k in parsed and isinstance(parsed[k], (int, float)):
+                out[k] = float(parsed[k]) if isinstance(parsed[k], float) else int(parsed[k])
+            else:
+                out[k] = WALL_DETECTION_CONFIG[k]
+        if out:
+            print(f"[LLM-WallConfig] 解析到完整配置（共 {len(out)} 项）: {json.dumps(out, ensure_ascii=False, indent=2)}")
+            return out
+    except json.JSONDecodeError:
+        print(f"[LLM-WallConfig] JSON 解析失败 前200字={text[:200]!r}")
+    return None

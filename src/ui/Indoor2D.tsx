@@ -78,6 +78,29 @@ export function Indoor2D(props: {
     }
   }, []);
 
+  /** 使用 generate_2d_opencv 逻辑opencv渲染墙体（不调 LLM） */
+  const handleRenderOpencv = useCallback(async () => {
+    setElementsError(null);
+    setElementsLoading(true);
+    try {
+      const res = await fetch('/map.png');
+      const blob = await res.blob();
+      const form = new FormData();
+      form.append('file', blob, 'map.png');
+      const apiRes = await fetch('/api/floor-plan/elements?engine=opencv', { method: 'POST', body: form });
+      const data = await apiRes.json().catch(() => null);
+      if (!apiRes.ok) {
+        throw new Error(data?.detail ?? data?.error ?? 'opencv渲染');
+      }
+      setElements(data);
+    } catch (e) {
+      setElementsError(e instanceof Error ? e.message : 'opencv渲染失败');
+      setElements(null);
+    } finally {
+      setElementsLoading(false);
+    }
+  }, []);
+
   const floorLabel = `${props.floor}F`;
   const devicesOnFloor = useMemo(() => props.devices.filter((d) => d.floor === props.floor), [props.devices, props.floor]);
 
@@ -123,6 +146,14 @@ export function Indoor2D(props: {
             title="用 OpenCV 解析平面图：墙体、标注、家具、区域，并渲染到地图上"
           >
             {elementsLoading ? '解析中…' : '解析平面图元素'}
+          </button>
+          <button
+            className="wm-btn wm-btn-ghost"
+            onClick={handleRenderOpencv}
+            disabled={elementsLoading}
+            title="使用 generate_2d_opencv 逻辑opencv渲染墙体（不调用 LLM）"
+          >
+            {elementsLoading ? '渲染中…' : 'opencv渲染'}
           </button>
         </div>
       </div>

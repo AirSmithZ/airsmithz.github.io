@@ -23,6 +23,7 @@ load_dotenv(_BACKEND / ".env")
 from backend.schemas.floor_plan import FloorPlan
 from backend.services.orchestrator import run_pipeline
 from backend.skills.generate_2d_map import classify_floor_plan_elements
+from backend.skills.generate_2d_opencv import classify_floor_plan_elements as classify_floor_plan_elements_opencv
 import numpy as np
 import cv2
 
@@ -97,10 +98,14 @@ async def get_floor_plan(
 
 
 @app.post("/api/floor-plan/elements")
-async def classify_elements(file: UploadFile = File(...)) -> dict:
+async def classify_elements(
+    file: UploadFile = File(...),
+    engine: str = Query("default", description="default=generate_2d_map(可含LLM); opencv=generate_2d_opencv 纯 OpenCV 直接渲染"),
+) -> dict:
     """
-    上传平面图 PNG/JPG，返回 OpenCV 分类结果：墙体、标注、家具、区域（归一化多边形）。
+    上传平面图 PNG/JPG，返回分类结果：墙体、标注、家具、区域（归一化多边形）。
     供前端 2D 地图按类型分色渲染。
+    engine=opencv 时使用 generate_2d_opencv 逻辑（不调 LLM），直接渲染墙体。
     """
     if not file.filename or not file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
         raise HTTPException(400, "只支持 PNG/JPG 图片")
@@ -109,7 +114,10 @@ async def classify_elements(file: UploadFile = File(...)) -> dict:
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
         raise HTTPException(400, "图片解码失败")
-    result = classify_floor_plan_elements(img, annotation_boxes_px=None)
+    if engine == "opencv":
+        result = classify_floor_plan_elements_opencv(img, annotation_boxes_px=None)
+    else:
+        result = classify_floor_plan_elements(img, annotation_boxes_px=None)
     return {
         "walls": result["walls"],
         "doors": result.get("doors", []),

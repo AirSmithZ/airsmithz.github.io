@@ -2,7 +2,7 @@
 墙体识别可调参数：抽离为固定配置，便于针对当前平面图调参与展示。
 
 使用方式：
-- 调参：直接修改下方 WALL_DETECTION_CONFIG 的数值，generate_2d_map 会读取。
+- 调参：直接修改下方 WALL_DETECTION_CONFIG 的数值，generate_2d_map 与 generate_2d_opencv 均会读取。
 - 固定展示：可将本配置导出为 JSON 供前端或文档展示当前识别条件。
 """
 

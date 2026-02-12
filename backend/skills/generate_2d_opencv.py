@@ -1,7 +1,6 @@
 """
 建筑图纸墙体识别：颜色 + 线宽区分墙体与标注，不调用 LLM。
-- 颜色：保留深灰/黑（墙体线），排除白背景、红（楼梯）、绿/蓝等彩色（家具、标注色块）。
-- 线厚：只保留粗线轮廓（周长²/面积 ≤ 阈值），细尺寸线、标注线不标为墙。
+可调参数见 wall_detection_config.WALL_DETECTION_CONFIG，与 generate_2d_map 共用同一配置。
 """
 
 import cv2
@@ -10,17 +9,9 @@ import requests
 from pathlib import Path
 from typing import Any, Sequence
 
-# 墙体色：灰色（含深灰、黑），排除纯白背景与彩色
-GREY_WALL_LO = 0
-GREY_WALL_HI = 248
-GREY_CHANNEL_DIFF_MAX = 60
-RED_MIN = 90
-RED_OVER_G = 35
-RED_OVER_B = 35
-# 线厚：① thin_ratio = 周长²/面积 ≤ 此值；② 或 等效线宽 2*area/perimeter ≥ 最小厚度
-WALL_MAX_THIN_RATIO = 420
-WALL_MIN_THICKNESS_PX = 2.0
+from backend.skills.wall_detection_config import WALL_DETECTION_CONFIG
 
+_cfg = WALL_DETECTION_CONFIG
 ELEMENT_WALL = "wall"
 
 
@@ -32,9 +23,9 @@ def _is_grey_color(bgr: np.ndarray) -> np.ndarray:
     channel_diff = max_channel - min_channel
     channel_mean = (b + g + r) / 3.0
     is_grey = (
-        (channel_diff < GREY_CHANNEL_DIFF_MAX)
-        & (channel_mean >= GREY_WALL_LO)
-        & (channel_mean <= GREY_WALL_HI)
+        (channel_diff < _cfg["grey_channel_diff_max"])
+        & (channel_mean >= _cfg["grey_wall_lo"])
+        & (channel_mean <= _cfg["grey_wall_hi"])
     )
     return is_grey
 
@@ -42,7 +33,11 @@ def _is_grey_color(bgr: np.ndarray) -> np.ndarray:
 def _is_red_color(bgr: np.ndarray) -> np.ndarray:
     """红色：R 明显高于 G、B（排除红色楼梯被标成墙）。"""
     b, g, r = bgr[:, :, 0], bgr[:, :, 1], bgr[:, :, 2]
-    return (r >= RED_MIN) & (r > g + RED_OVER_G) & (r > b + RED_OVER_B)
+    return (
+        (r >= _cfg["red_min"])
+        & (r > g + _cfg["red_over_g"])
+        & (r > b + _cfg["red_over_b"])
+    )
 
 
 def _binary_grey_walls(img_bgr: np.ndarray) -> np.ndarray:
@@ -85,7 +80,10 @@ def _is_wall_contour(contour: np.ndarray, total_px: int) -> bool:
     area = cv2.contourArea(contour)
     if area < 1e-6:
         return False
-    min_wall_area = max(150, int(total_px * 0.0006))
+    min_wall_area = max(
+        _cfg["min_wall_area_abs"],
+        int(total_px * _cfg["min_wall_area_ratio"]),
+    )
     if area < min_wall_area:
         return False
     perimeter = cv2.arcLength(contour, True)
@@ -93,7 +91,10 @@ def _is_wall_contour(contour: np.ndarray, total_px: int) -> bool:
         return False
     thin_ratio = (perimeter * perimeter) / area
     thickness = 2.0 * area / perimeter
-    return thin_ratio <= WALL_MAX_THIN_RATIO or thickness >= WALL_MIN_THICKNESS_PX
+    return (
+        thin_ratio <= _cfg["wall_max_thin_ratio"]
+        or thickness >= _cfg["wall_min_thickness_px"]
+    )
 
 
 def _find_contours_from_binary(
@@ -101,12 +102,12 @@ def _find_contours_from_binary(
     kernel_size: int = 5,
     total_px: int | None = None,
 ) -> tuple[list, np.ndarray]:
-    """
-    形态学后找轮廓。用 (2,2) 开运算避免厚墙被腐蚀掉，再闭运算连通。
-    """
-    k = max(3, min(7, kernel_size))
+    """形态学后找轮廓：开运算避免厚墙被腐蚀，再闭运算连通。"""
+    so = _cfg["morph_open_size"]
+    sc_min, sc_max = _cfg["morph_close_size_min"], _cfg["morph_close_size_max"]
+    k = max(sc_min, min(sc_max, kernel_size))
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k, k))
-    small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2, 2))
+    small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (so, so))
     opened = cv2.morphologyEx(binary, cv2.MORPH_OPEN, small)
     closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)
     contours, hierarchy = cv2.findContours(closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -145,23 +146,23 @@ def classify_floor_plan_elements(
     h, w = img.shape[:2]
     total_px = w * h
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    k_size = max(3, min(9, min(w, h) // 150))
+    k_size = max(3, min(9, min(w, h) // _cfg["kernel_size_divisor"]))
 
     walls: list[list[list[float]]] = []
 
     img_grey = _binary_grey_walls(img)
     grey_count = int(np.sum(img_grey == 255))
-    if grey_count < total_px * 0.02:
+    if grey_count < total_px * _cfg["grey_white_ratio_use_fallback"]:
         b, g, r = img[:, :, 0], img[:, :, 1], img[:, :, 2]
         is_red = _is_red_color(img)
         ch_max = np.maximum(np.maximum(b, g), r)
         ch_min = np.minimum(np.minimum(b, g), r)
-        is_low_sat = (ch_max - ch_min) < 70
+        is_low_sat = (ch_max - ch_min) < _cfg["low_sat_channel_diff"]
         img_grey = np.where(
-            (gray >= GREY_WALL_LO) & (gray <= GREY_WALL_HI) & ~is_red & is_low_sat,
+            (gray >= _cfg["grey_wall_lo"]) & (gray <= _cfg["grey_wall_hi"]) & ~is_red & is_low_sat,
             255, 0,
         ).astype(np.uint8)
-    if np.sum(img_grey == 255) < total_px * 0.005:
+    if np.sum(img_grey == 255) < total_px * _cfg["grey_white_ratio_use_otsu"]:
         _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         if np.mean(otsu) > 127:
             otsu = 255 - otsu
@@ -180,7 +181,10 @@ def classify_floor_plan_elements(
         if len(poly) >= 2:
             walls.append(poly)
     if not walls and contours:
-        min_area_loose = max(80, int(total_px * 0.0003))
+        min_area_loose = max(
+            _cfg["fallback_min_area_abs"],
+            int(total_px * _cfg["fallback_min_area_ratio"]),
+        )
         for cnt in contours:
             area = cv2.contourArea(cnt)
             if area < min_area_loose:
@@ -190,7 +194,7 @@ def classify_floor_plan_elements(
                 continue
             thin = (per * per) / area
             thickness = 2.0 * area / per
-            if thin <= 500 or thickness >= 1.5:
+            if thin <= _cfg["fallback_max_thin_ratio"] or thickness >= _cfg["fallback_min_thickness_px"]:
                 poly = _contour_to_normalized_polygon(cnt, w, h)
                 if len(poly) >= 2:
                     walls.append(poly)
@@ -242,12 +246,16 @@ def _get_wall_contours_from_img(
     h, w = img.shape[:2]
 
     img_binary = _binary_grey_walls(img)
-    if np.sum(img_binary == 255) < (w * h * 0.01):
+    ratio_sec = _cfg["grey_ratio_secondary"]
+    if np.sum(img_binary == 255) < (w * h * ratio_sec):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img_binary = np.where((gray >= GREY_WALL_LO) & (gray <= GREY_WALL_HI), 255, 0).astype(np.uint8)
+        img_binary = np.where(
+            (gray >= _cfg["grey_wall_lo"]) & (gray <= _cfg["grey_wall_hi"]),
+            255, 0,
+        ).astype(np.uint8)
         is_red = _is_red_color(img)
         img_binary = np.where(~is_red & (img_binary == 255), 255, 0).astype(np.uint8)
-        if np.sum(img_binary == 255) < (w * h * 0.01):
+        if np.sum(img_binary == 255) < (w * h * ratio_sec):
             _, img_binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             if np.mean(img_binary) > 127:
                 img_binary = 255 - img_binary
@@ -258,7 +266,7 @@ def _get_wall_contours_from_img(
         expand_px = max(3, min(w, h) // 200)
         img_binary = _mask_annotation_regions(img_binary, annotation_boxes_px, expand_px)
 
-    kernel_size = max(3, min(9, min(w, h) // 150))
+    kernel_size = max(3, min(9, min(w, h) // _cfg["kernel_size_divisor"]))
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
     img_closed = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel)
 
