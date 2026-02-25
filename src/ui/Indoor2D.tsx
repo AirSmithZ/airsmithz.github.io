@@ -30,6 +30,15 @@ type Pipeline = {
   skillE?: PipelineStage;
 };
 
+/** public/CADimages 下可切换的平面图 */
+const CAD_IMAGES = [
+  { value: '/CADimages/water.png', label: 'water' },
+  { value: '/CADimages/water2.png', label: 'water2' },
+  { value: '/CADimages/water3.png', label: 'water3' },
+  { value: '/CADimages/water4.png', label: 'water4' },
+  { value: '/map.png', label: 'map' },
+];
+
 function pointsToStyle(nx: number, ny: number) {
   return {
     left: `${nx * 100}%`,
@@ -50,43 +59,38 @@ export function Indoor2D(props: {
   registerDropMapper: (fn: ((client: { x: number; y: number }) => { nx: number; ny: number }) | null) => void;
 }) {
   const [showPipeline, setShowPipeline] = useState(false);
+  const [currentImage, setCurrentImage] = useState(CAD_IMAGES[0].value);
   const [elements, setElements] = useState<FloorPlanElements | null>(null);
   const [elementsLoading, setElementsLoading] = useState(false);
   const [elementsError, setElementsError] = useState<string | null>(null);
+  const [imgAspect, setImgAspect] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
 
-  const handleParseElements = useCallback(async () => {
-    setElementsError(null);
-    setElementsLoading(true);
-    try {
-      const res = await fetch('/map.png');
-      const blob = await res.blob();
-      const form = new FormData();
-      form.append('file', blob, 'map.png');
-      const apiRes = await fetch('/api/floor-plan/elements', { method: 'POST', body: form });
-      const data = await apiRes.json().catch(() => null);
-      if (!apiRes.ok) {
-        throw new Error(data?.detail ?? data?.error ?? '解析失败');
+  /** 图片加载后更新宽高比，用于 overlay 与 object-fit:contain 的显示区域对齐 */
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    const onLoad = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        setImgAspect(img.naturalWidth / img.naturalHeight);
       }
-      setElements(data);
-    } catch (e) {
-      setElementsError(e instanceof Error ? e.message : '解析平面图元素失败');
-      setElements(null);
-    } finally {
-      setElementsLoading(false);
-    }
-  }, []);
+    };
+    if (img.complete) onLoad();
+    else img.addEventListener('load', onLoad);
+    return () => img.removeEventListener('load', onLoad);
+  }, [currentImage]);
 
-  /** 使用 generate_2d_opencv 逻辑opencv渲染墙体（不调 LLM） */
+  /** 使用当前选中的平面图 + generate_2d_opencv 逻辑渲染墙体（不调 LLM） */
   const handleRenderOpencv = useCallback(async () => {
     setElementsError(null);
     setElementsLoading(true);
     try {
-      const res = await fetch('/map.png');
+      const res = await fetch(currentImage);
       const blob = await res.blob();
+      const filename = currentImage.split('/').pop() ?? 'map.png';
       const form = new FormData();
-      form.append('file', blob, 'map.png');
+      form.append('file', blob, filename);
       const apiRes = await fetch('/api/floor-plan/elements?engine=opencv', { method: 'POST', body: form });
       const data = await apiRes.json().catch(() => null);
       if (!apiRes.ok) {
@@ -99,10 +103,18 @@ export function Indoor2D(props: {
     } finally {
       setElementsLoading(false);
     }
-  }, []);
+  }, [currentImage]);
 
   const floorLabel = `${props.floor}F`;
   const devicesOnFloor = useMemo(() => props.devices.filter((d) => d.floor === props.floor), [props.devices, props.floor]);
+
+  /** 优先用后端 image_size（与坐标归一化一致），否则用图片 natural 尺寸 */
+  const displayAspect = useMemo(() => {
+    if (elements?.image_size && elements.image_size[0] > 0 && elements.image_size[1] > 0) {
+      return elements.image_size[0] / elements.image_size[1];
+    }
+    return imgAspect;
+  }, [elements?.image_size, imgAspect]);
 
   useEffect(() => {
     props.registerDropMapper((client) => {
@@ -128,24 +140,34 @@ export function Indoor2D(props: {
         </div>
         <div className="wm-indoor2d-actions">
           <div className="wm-badge">{floorLabel}</div>
-          <button
+          <div className="wm-indoor2d-image-switch" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--wm-muted, #64748b)' }}>平面图:</span>
+            {CAD_IMAGES.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                className={`wm-btn wm-btn-ghost ${currentImage === value ? 'wm-btn-primary' : ''}`}
+                style={{ fontSize: 12, padding: '4px 8px' }}
+                onClick={() => {
+                  setCurrentImage(value);
+                  setElements(null);
+                }}
+                title={value}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {/* <button
             className="wm-btn wm-btn-primary"
             onClick={() => props.onGenerate3D(props.floor)}
             disabled={props.generate3DLoading}
             title="调用后端接口根据当前平面图生成 3D 建模"
           >
             {props.generate3DLoading ? '生成中…' : '生成3D建模'}
-          </button>
+          </button> */}
           <button className="wm-btn wm-btn-ghost" onClick={props.onEnter3D} title="进入已生成的 3D 视图">
             进入 3D
-          </button>
-          <button
-            className="wm-btn wm-btn-ghost"
-            onClick={handleParseElements}
-            disabled={elementsLoading}
-            title="用 OpenCV 解析平面图：墙体、标注、家具、区域，并渲染到地图上"
-          >
-            {elementsLoading ? '解析中…' : '解析平面图元素'}
           </button>
           <button
             className="wm-btn wm-btn-ghost"
@@ -211,16 +233,31 @@ export function Indoor2D(props: {
           props.onPickPoint({ nx: Math.max(0, Math.min(1, nx)), ny: Math.max(0, Math.min(1, ny)) });
         }}
       >
-        <img ref={imgRef} className="wm-indoor2d-img" src="/map.png" alt="Indoor layout" draggable={false} />
+        <div
+          className="wm-indoor2d-inner"
+          style={
+            displayAspect != null
+              ? { aspectRatio: `${displayAspect}` }
+              : undefined
+          }
+        >
+          <img ref={imgRef} className="wm-indoor2d-img" src={currentImage} alt="Indoor layout" draggable={false} />
 
-        <div className="wm-indoor2d-overlay">
-          {elements ? (
-            <svg
-              className="wm-indoor2d-elements-svg"
-              viewBox="0 0 1 1"
-              preserveAspectRatio="xMidYMid meet"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-            >
+          <div className="wm-indoor2d-overlay">
+            {elements ? (
+              <svg
+                className="wm-indoor2d-elements-svg"
+                viewBox="0 0 1 1"
+                preserveAspectRatio="none"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                  overflow: 'visible',
+                }}
+              >
               {(elements.zones ?? []).map((poly, i) => (
                 <polygon
                   key={`z-${i}`}
@@ -293,16 +330,17 @@ export function Indoor2D(props: {
                   strokeWidth={0.002}
                 />
               ))}
-            </svg>
-          ) : null}
-          {devicesOnFloor.map((d) => (
-            <div
-              key={d.id}
-              className={`wm-dot wm-dot-${d.kind}`}
-              style={pointsToStyle(d.nx, d.ny)}
-              title={`${d.kind} @ ${Math.round(d.nx * 100)}%, ${Math.round(d.ny * 100)}%`}
-            />
-          ))}
+              </svg>
+            ) : null}
+            {devicesOnFloor.map((d) => (
+              <div
+                key={d.id}
+                className={`wm-dot wm-dot-${d.kind}`}
+                style={pointsToStyle(d.nx, d.ny)}
+                title={`${d.kind} @ ${Math.round(d.nx * 100)}%, ${Math.round(d.ny * 100)}%`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

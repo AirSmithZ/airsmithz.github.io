@@ -450,9 +450,25 @@ body {
   flex: 1;
   position: relative;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
   cursor: crosshair;
   background: rgba(2, 6, 23, 0.12);
+  display: grid;
+  place-items: center;
+}
+
+/* 与图片宽高比一致，contain 居中，使 overlay 与 object-fit 显示区域对齐 */
+/* grid 子项 + aspect-ratio 能正确收缩为 contain 框（非全屏时） */
+.wm-indoor2d-inner {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  position: relative;
+  display: block;
+  justify-self: center;
+  align-self: center;
+  overflow: visible;
 }
 
 .wm-indoor2d-img {
@@ -466,6 +482,7 @@ body {
 .wm-indoor2d-overlay {
   position: absolute;
   inset: 0;
+  overflow: visible;
 }
 
 .wm-dot {
