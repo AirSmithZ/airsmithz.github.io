@@ -266,6 +266,8 @@ def _get_wall_contours_from_img(
         expand_px = max(3, min(w, h) // 200)
         img_binary = _mask_annotation_regions(img_binary, annotation_boxes_px, expand_px)
 
+    img_binary = _remove_noise_components(img_binary)
+
     kernel_size = max(3, min(9, min(w, h) // _cfg["kernel_size_divisor"]))
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
     img_closed = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel)
