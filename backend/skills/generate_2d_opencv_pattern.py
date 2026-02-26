@@ -22,12 +22,11 @@ def _get_wall_color(gray: np.ndarray) -> int:
     return peak_idx
 
 
-def _build_wall_mask(
+def _get_wall_color_range(
     gray: np.ndarray,
-    img_bgr: np.ndarray,
     wall_colors: set[int] | None = None,
-) -> np.ndarray:
-    """以墙体颜色生成二值掩码。wall_colors 为 None 时用直方图峰值。"""
+) -> tuple[int, int]:
+    """返回墙体色值范围 (lo, hi)，供标注框过滤使用。"""
     if wall_colors:
         lo, hi = min(wall_colors), max(wall_colors)
         pad = _cfg.get("wall_color_backtrack_tolerance", 3)
@@ -39,6 +38,16 @@ def _build_wall_mask(
         tol = _cfg["wall_color_tolerance"]
         lo = max(0, peak - tol)
         hi = min(255, peak + tol)
+    return lo, hi
+
+
+def _build_wall_mask(
+    gray: np.ndarray,
+    img_bgr: np.ndarray,
+    wall_colors: set[int] | None = None,
+) -> np.ndarray:
+    """以墙体颜色生成二值掩码。wall_colors 为 None 时用直方图峰值。"""
+    lo, hi = _get_wall_color_range(gray, wall_colors)
 
     mask = ((gray >= lo) & (gray <= hi)).astype(np.uint8) * 255
     b, g, r = img_bgr[:, :, 0], img_bgr[:, :, 1], img_bgr[:, :, 2]
@@ -93,7 +102,7 @@ def _exclude_interference(mask: np.ndarray) -> np.ndarray:
 
 
 def _is_wall_region(contour: np.ndarray, total_px: int) -> bool:
-    """面积、细长比基本约束。"""
+    """面积、细长比、最小宽度约束。墙体有特定宽度，过滤低宽度数据。"""
     area = cv2.contourArea(contour)
     if area < 1e-6:
         return False
@@ -105,15 +114,64 @@ def _is_wall_region(contour: np.ndarray, total_px: int) -> bool:
         return False
     if (per * per) / area > _cfg["max_thin_ratio"]:
         return False
+    thickness = 2.0 * area / per
+    if thickness < _cfg.get("wall_min_width_px", 2):
+        return False
     return True
 
 
+def _orthogonalize_polygon(pts: list[list[float]]) -> list[list[float]]:
+    """
+    墙体横平竖直：将边缘吸附到水平/垂直方向。
+    每边判断更接近水平还是垂直，取交点作为新顶点。
+    """
+    if len(pts) < 3:
+        return pts
+    n = len(pts)
+    thresh_rad = _cfg.get("wall_orthogonal_angle_thresh", 22.5) * np.pi / 180
+    cot = 1.0 / np.tan(thresh_rad) if thresh_rad > 1e-6 else 1e6
+
+    def _is_horizontal(dx: float, dy: float) -> bool:
+        if abs(dx) + abs(dy) < 1e-9:
+            return True
+        return abs(dx) >= cot * abs(dy)
+
+    out: list[list[float]] = []
+    for i in range(n):
+        i0, i1 = (i - 1) % n, (i + 1) % n
+        dx_in = pts[i][0] - pts[i0][0]
+        dy_in = pts[i][1] - pts[i0][1]
+        dx_out = pts[i1][0] - pts[i][0]
+        dy_out = pts[i1][1] - pts[i][1]
+        h_in = _is_horizontal(dx_in, dy_in)
+        h_out = _is_horizontal(dx_out, dy_out)
+        if h_in and h_out:
+            out.append([(pts[i0][0] + pts[i1][0]) / 2, pts[i][1]])
+        elif not h_in and not h_out:
+            out.append([pts[i][0], (pts[i0][1] + pts[i1][1]) / 2])
+        elif h_in and not h_out:
+            out.append([pts[i1][0], pts[i0][1]])
+        else:
+            out.append([pts[i0][0], pts[i1][1]])
+    return out
+
+
 def _contour_to_normalized_polygon(contour: np.ndarray, w: int, h: int) -> list[list[float]]:
-    """轮廓转为归一化 [0..1] 多边形。"""
+    """
+    轮廓转为归一化 [0..1] 多边形。
+    清除锯齿：approxPolyDP 简化；正交化：横平竖直；补全：形态学闭运算在 mask 阶段完成。
+    """
     if contour is None or len(contour) < 2:
         return []
-    pts = contour.reshape(-1, 2)
-    return [[float(x) / w, float(y) / h] for x, y in pts]
+    per = cv2.arcLength(contour, True)
+    eps_ratio = _cfg.get("wall_approx_epsilon_ratio", 0.005)
+    approx = cv2.approxPolyDP(contour, eps_ratio * per, True)
+    pts = approx.reshape(-1, 2).tolist()
+    if len(pts) < 3:
+        return [[float(x) / w, float(y) / h] for x, y in pts]
+    pts_px = [[float(p[0]), float(p[1])] for p in pts]
+    ortho = _orthogonalize_polygon(pts_px)
+    return [[x / w, y / h] for x, y in ortho]
 
 
 def _run_detection(
@@ -127,16 +185,25 @@ def _run_detection(
 ) -> tuple[list[list[list[float]]], list, list[int]]:
     """单轮检测：返回 (walls, contours, valid_indices)。"""
     wall_mask = _build_wall_mask(gray, img, wall_colors)
-    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    k_size = _cfg.get("wall_morph_close_size", 5)
+    k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_size, k_size))
     wall_mask = cv2.morphologyEx(wall_mask, cv2.MORPH_CLOSE, k)
     wall_mask = _exclude_interference(wall_mask)
 
     if annotation_boxes_px:
+        lo, hi = _get_wall_color_range(gray, wall_colors)
         expand = max(3, min(w, h) // 200)
         for (x1, y1, x2, y2) in annotation_boxes_px:
             x1, y1 = max(0, x1 - expand), max(0, y1 - expand)
             x2, y2 = min(w, x2 + expand), min(h, y2 + expand)
-            wall_mask[y1:y2, x1:x2] = 0
+            roi = gray[y1:y2, x1:x2]
+            if roi.size == 0:
+                continue
+            # 被覆盖区域色值与墙体一致则不过滤，否则过滤
+            in_range = (roi >= lo) & (roi <= hi)
+            wall_ratio = np.mean(in_range)
+            if wall_ratio < 0.5:
+                wall_mask[y1:y2, x1:x2] = 0
 
     contours, _ = cv2.findContours(wall_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 

@@ -8,8 +8,8 @@ from typing import Any
 
 WALL_PATTERN_CONFIG: dict[str, Any] = {
     "wall_color_max": 128,
-    "wall_color_tolerance": 25,
-    "wall_color_backtrack_tolerance": 3,
+    "wall_color_tolerance": 10,
+    "wall_color_backtrack_tolerance": 1,
     "min_contour_area": 150,
     "min_contour_area_ratio": 0.0005,
     "max_thin_ratio": 1500,
@@ -19,4 +19,9 @@ WALL_PATTERN_CONFIG: dict[str, Any] = {
     "red_min": 90,
     "red_over_g": 35,
     "red_over_b": 35,
+    # 墙体宽度与边缘后处理
+    "wall_min_width_px": 2,
+    "wall_approx_epsilon_ratio": 0.005,
+    "wall_orthogonal_angle_thresh": 22.5,
+    "wall_morph_close_size": 7,
 }
