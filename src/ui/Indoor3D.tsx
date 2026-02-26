@@ -77,8 +77,9 @@ function DragDropMapper(props: {
   return null;
 }
 
-function DeviceMesh(props: { bounds: { w: number; h: number }; d: DevicePlacement }) {
-  const x = (props.d.nx - 0.5) * props.bounds.w;
+function DeviceMesh(props: { bounds: { w: number; h: number }; d: DevicePlacement; flippedX?: boolean }) {
+  const nx = props.flippedX && !props.d.placedIn3D ? 1 - props.d.nx : props.d.nx;
+  const x = (nx - 0.5) * props.bounds.w;
   const z = (0.5 - props.d.ny) * props.bounds.h;
 
   const color = props.d.kind === 'camera' ? '#22c55e' : props.d.kind === 'sensor' ? '#60a5fa' : '#f59e0b';
@@ -99,8 +100,9 @@ function DeviceMesh(props: { bounds: { w: number; h: number }; d: DevicePlacemen
   );
 }
 
-function SelectedMarker(props: { bounds: { w: number; h: number }; p: { nx: number; ny: number } }) {
-  const x = (props.p.nx - 0.5) * props.bounds.w;
+function SelectedMarker(props: { bounds: { w: number; h: number }; p: { nx: number; ny: number }; flippedX?: boolean }) {
+  const nx = props.flippedX ? 1 - props.p.nx : props.p.nx;
+  const x = (nx - 0.5) * props.bounds.w;
   const z = (0.5 - props.p.ny) * props.bounds.h;
   return (
     <group position={[x, 0.01, z]}>
@@ -170,10 +172,10 @@ export function Indoor3D(props: {
           ))}
 
           {devicesOnFloor.map((d) => (
-            <DeviceMesh key={d.id} bounds={plan.bounds} d={d} />
+            <DeviceMesh key={d.id} bounds={plan.bounds} d={d} flippedX={plan.flippedX} />
           ))}
 
-          {props.selectedPoint ? <SelectedMarker bounds={plan.bounds} p={props.selectedPoint} /> : null}
+          {props.selectedPoint ? <SelectedMarker bounds={plan.bounds} p={props.selectedPoint} flippedX={plan.flippedX} /> : null}
 
           <gridHelper args={[plan.bounds.w, plan.bounds.w, '#22314f', '#121a2c']} position={[0, 0.001, 0]} />
           <OrbitControls makeDefault minDistance={5} maxDistance={18} maxPolarAngle={Math.PI * 0.49} />

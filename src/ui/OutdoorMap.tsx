@@ -31,6 +31,8 @@ function ZoomHint(props: { zoom: number }) {
   );
 }
 
+const PITCH_3D = 55;
+
 export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<AMap.Map | null>(null);
@@ -52,6 +54,8 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
     ] as [number, number][];
   }, []);
 
+  const TRANSITION_MS = 600;
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -64,19 +68,41 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
       version: '2.0',
     })
       .then((AMap: typeof globalThis.AMap) => {
+        const is3D = zoom >= 17;
         const map = new AMap.Map(containerRef.current!, {
           center: amapCenter,
           zoom,
-          viewMode: '2D',
+          viewMode: '3D',
           scrollWheelZoom: true,
+          showBuildingBlock: false,
+          pitch: is3D ? PITCH_3D : 0,
         });
         mapRef.current = map;
 
+        try {
+          if (AMap.Lights?.AmbientLight) {
+            map.AmbientLight = new AMap.Lights.AmbientLight([1, 1, 1], 0.6);
+            map.DirectionLight = new AMap.Lights.DirectionLight([0, 0, 1], [1, 1, 1], 1);
+          }
+          const prismPath = polygonPath.map(([lng, lat]) => new AMap.LngLat(lng, lat));
+          const object3DLayer = new AMap.Object3DLayer();
+          const prism = new AMap.Object3D.Prism({
+            path: prismPath,
+            height: 60,
+            color: 'rgba(14, 165, 233, 0.5)',
+          });
+          prism.transparent = true;
+          object3DLayer.add(prism);
+          map.add(object3DLayer);
+        } catch (e) {
+          console.warn('AMap 3D Prism:', e);
+        }
+
         const polygon = new AMap.Polygon({
           path: polygonPath,
-          fillColor: zoom >= 17 ? '#0ea5e9' : '#334155',
-          fillOpacity: zoom >= 17 ? 0.32 : 0.18,
-          strokeColor: zoom >= 17 ? '#7cf2b1' : '#64748b',
+          fillColor: is3D ? '#0ea5e9' : '#334155',
+          fillOpacity: is3D ? 0.32 : 0.18,
+          strokeColor: is3D ? '#7cf2b1' : '#64748b',
           strokeWeight: 3,
         });
         polygon.on('click', () => {
@@ -85,16 +111,38 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
         map.add(polygon);
         polygonRef.current = polygon;
 
+        let buildingsLayer: AMap.Buildings | null = null;
+        if (is3D) {
+          buildingsLayer = new AMap.Buildings({
+            zooms: [17, 20],
+            zIndex: 10,
+            heightFactor: 2,
+          });
+          map.add(buildingsLayer);
+        }
+
         map.on('zoomend', () => {
-          const z = map.getZoom();
-          setZoom(z);
+          const newZ = map.getZoom();
+          setZoom(newZ);
+          const newIs3D = newZ >= 17;
           if (polygonRef.current) {
-            const canPick = z >= 17;
             polygonRef.current.setOptions({
-              fillColor: canPick ? '#0ea5e9' : '#334155',
-              fillOpacity: canPick ? 0.32 : 0.18,
-              strokeColor: canPick ? '#7cf2b1' : '#64748b',
+              fillColor: newIs3D ? '#0ea5e9' : '#334155',
+              fillOpacity: newIs3D ? 0.32 : 0.18,
+              strokeColor: newIs3D ? '#7cf2b1' : '#64748b',
             });
+          }
+          map.setPitch(newIs3D ? PITCH_3D : 0, false, TRANSITION_MS);
+          if (newIs3D && !buildingsLayer) {
+            buildingsLayer = new AMap.Buildings({
+              zooms: [17, 20],
+              zIndex: 10,
+              heightFactor: 2,
+            });
+            map.add(buildingsLayer);
+          } else if (!newIs3D && buildingsLayer) {
+            map.remove(buildingsLayer);
+            buildingsLayer = null;
           }
         });
       })
@@ -105,7 +153,7 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
       mapRef.current = null;
       polygonRef.current = null;
     };
-  }, [amapCenter, polygonPath]); // zoom not in deps: we set it from map
+  }, [amapCenter, polygonPath]);
 
   return (
     <div className="wm-map">

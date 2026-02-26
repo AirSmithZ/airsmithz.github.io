@@ -7,7 +7,8 @@ import { OutdoorMap } from './OutdoorMap';
 import { DevicePalette, type DeviceKind } from './DevicePalette';
 import { Segmented } from './Segmented';
 import type { Building, DevicePlacement, ViewMode } from './types';
-import type { FloorPlan } from './floorPlan';
+import type { FloorPlan, FloorPlanElements } from './floorPlan';
+import { elementsToFloorPlan } from './floorPlan';
 import { clamp01 } from './utils/clamp';
 
 const DEFAULT_BUILDING: Building = {
@@ -39,6 +40,8 @@ export function App() {
   const [selectedIndoorPoint, setSelectedIndoorPoint] = useState<{ nx: number; ny: number } | null>(null);
   const [devices, setDevices] = useState<DevicePlacement[]>([]);
   const [floorPlanByFloor, setFloorPlanByFloor] = useState<Record<number, FloorPlan | null>>({});
+  const [elementsByFloor, setElementsByFloor] = useState<Record<number, FloorPlanElements | null>>({});
+  const [currentImageByFloor, setCurrentImageByFloor] = useState<Record<number, string>>({});
   const [floorPlanLoading, setFloorPlanLoading] = useState(false);
   const [floorPlanError, setFloorPlanError] = useState<string | null>(null);
   const [floorPlanPipeline, setFloorPlanPipeline] = useState<Record<string, unknown> | null>(null);
@@ -69,6 +72,15 @@ export function App() {
     setSelectedBuilding((b) => b ?? DEFAULT_BUILDING);
     setMode('indoor2d');
   }, []);
+
+  const handleEnter3D = useCallback(() => {
+    const elements = elementsByFloor[floor];
+    if (elements?.walls?.length) {
+      const plan = elementsToFloorPlan(elements);
+      setFloorPlanByFloor((p) => ({ ...p, [floor]: plan }));
+    }
+    setMode('indoor3d');
+  }, [floor, elementsByFloor]);
 
   const handleBuildingClick = useCallback((b: Building) => {
     setSelectedBuilding(b);
@@ -112,7 +124,7 @@ export function App() {
   );
 
   const placeDeviceAt = useCallback(
-    (kind: DeviceKind, nx: number, ny: number) => {
+    (kind: DeviceKind, nx: number, ny: number, placedIn3D?: boolean) => {
       setDevices((prev) => [
         ...prev,
         {
@@ -121,6 +133,7 @@ export function App() {
           floor,
           nx,
           ny,
+          placedIn3D,
         },
       ]);
     },
@@ -162,9 +175,9 @@ export function App() {
       const mapper = dropMapperRef.current;
       const container = dropRef.current;
       const { nx, ny } = mapper ? mapper(pt) : container ? toNormalizedPoint(container, pt) : { nx: 0.5, ny: 0.5 };
-      placeDeviceAt(kind, nx, ny);
+      placeDeviceAt(kind, nx, ny, mode === 'indoor3d');
     },
-    [placeDeviceAt],
+    [placeDeviceAt, mode],
   );
 
   const title = useMemo(() => {
@@ -263,11 +276,15 @@ export function App() {
                   floor={floor}
                   devices={devices}
                   onPickPoint={(p) => setSelectedIndoorPoint(p)}
-                  onEnter3D={() => setMode('indoor3d')}
+                  onEnter3D={handleEnter3D}
                   onGenerate3D={handleGenerate3D}
                   generate3DLoading={floorPlanLoading}
                   generate3DError={floorPlanError}
                   pipeline={floorPlanPipeline}
+                  elements={elementsByFloor[floor] ?? null}
+                  currentImage={currentImageByFloor[floor] ?? undefined}
+                  onElementsChange={(elements) => setElementsByFloor((p) => ({ ...p, [floor]: elements }))}
+                  onCurrentImageChange={(image) => setCurrentImageByFloor((p) => ({ ...p, [floor]: image }))}
                   registerDropMapper={(fn) => {
                     dropMapperRef.current = fn;
                   }}

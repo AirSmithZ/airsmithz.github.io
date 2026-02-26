@@ -9,6 +9,10 @@ declare global {
       zoom?: number;
       viewMode?: '2D' | '3D';
       scrollWheelZoom?: boolean;
+      pitch?: number;
+      rotation?: number;
+      showBuildingBlock?: boolean;
+      layers?: unknown[];
     }
     interface PolygonOptions {
       path: [number, number][] | Array<[number, number][]>;
@@ -17,10 +21,26 @@ declare global {
       strokeColor?: string;
       strokeWeight?: number;
     }
+    interface BuildingsOptions {
+      zooms?: [number, number];
+      zIndex?: number;
+      heightFactor?: number;
+    }
+    class Buildings {
+      constructor(options?: BuildingsOptions);
+    }
+    interface LngLat {
+      constructor(lng: number, lat: number);
+      toJSON(): [number, number];
+    }
     class Map {
       constructor(container: string | HTMLElement, options?: MapOptions);
-      add(overlay: Polygon): void;
+      add(overlay: Polygon | Buildings): void;
+      remove(overlay: unknown): void;
       getZoom(): number;
+      getCenter(): LngLat;
+      /** 设置俯仰角，immediately=false 时带动画，duration 为动画时长(ms) */
+      setPitch(pitch: number, immediately?: boolean, duration?: number): void;
       on(type: string, callback: () => void): void;
       destroy(): void;
     }
@@ -41,8 +61,11 @@ declare module '@amap/amap-jsapi-loader' {
     version?: string;
     plugins?: string[];
   }
-  function load(options: LoaderOptions): Promise<typeof AMap>;
-  export default load;
+  const loader: {
+    load(options: LoaderOptions): Promise<typeof AMap>;
+    reset(): void;
+  };
+  export default loader;
 }
 
 export {};

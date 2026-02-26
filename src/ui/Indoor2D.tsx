@@ -1,19 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Building, DevicePlacement } from './types';
-
-/** 平面图元素分类 API 返回（与 backend generate_2d_map 一致） */
-export type FloorPlanElements = {
-  walls: number[][][];
-  doors?: number[][][];
-  windows?: number[][][];
-  stairs?: number[][][];
-  columns?: number[][][];
-  furniture: number[][][];
-  zones: number[][][];
-  annotations: number[][][];
-  image_size: [number, number];
-};
+import type { FloorPlanElements } from './floorPlan';
 
 type PipelineStage = {
   status: string;
@@ -46,6 +34,8 @@ function pointsToStyle(nx: number, ny: number) {
   } as const;
 }
 
+const DEFAULT_CAD_IMAGE = CAD_IMAGES[0].value;
+
 export function Indoor2D(props: {
   building: Building;
   floor: number;
@@ -56,11 +46,15 @@ export function Indoor2D(props: {
   generate3DLoading?: boolean;
   generate3DError?: string | null;
   pipeline?: Pipeline | null;
+  elements?: FloorPlanElements | null;
+  currentImage?: string;
+  onElementsChange?: (elements: FloorPlanElements | null) => void;
+  onCurrentImageChange?: (image: string) => void;
   registerDropMapper: (fn: ((client: { x: number; y: number }) => { nx: number; ny: number }) | null) => void;
 }) {
   const [showPipeline, setShowPipeline] = useState(false);
-  const [currentImage, setCurrentImage] = useState(CAD_IMAGES[0].value);
-  const [elements, setElements] = useState<FloorPlanElements | null>(null);
+  const currentImage = props.currentImage ?? DEFAULT_CAD_IMAGE;
+  const elements = props.elements ?? null;
   const [elementsLoading, setElementsLoading] = useState(false);
   const [elementsError, setElementsError] = useState<string | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -81,7 +75,7 @@ export function Indoor2D(props: {
     return () => img.removeEventListener('load', onLoad);
   }, [currentImage]);
 
-  /** 使用当前选中的平面图 + generate_2d_opencv 逻辑渲染墙体（不调 LLM） */
+  /** 使用当前选中的平面图 + generate_2d_opencv 逻辑渲染墙体（颜色+线宽，不调 LLM） */
   const handleRenderOpencv = useCallback(async () => {
     setElementsError(null);
     setElementsLoading(true);
@@ -96,14 +90,38 @@ export function Indoor2D(props: {
       if (!apiRes.ok) {
         throw new Error(data?.detail ?? data?.error ?? 'opencv渲染');
       }
-      setElements(data);
+      props.onElementsChange?.(data);
     } catch (e) {
       setElementsError(e instanceof Error ? e.message : 'opencv渲染失败');
-      setElements(null);
+      props.onElementsChange?.(null);
     } finally {
       setElementsLoading(false);
     }
-  }, [currentImage]);
+  }, [currentImage, props.onElementsChange]);
+
+  /** 基于 wall.md 像素级分析：预处理→图案特征(ANSI31/AR-CONC/SOLID)→几何验证 */
+  const handleRenderPattern = useCallback(async () => {
+    setElementsError(null);
+    setElementsLoading(true);
+    try {
+      const res = await fetch(currentImage);
+      const blob = await res.blob();
+      const filename = currentImage.split('/').pop() ?? 'map.png';
+      const form = new FormData();
+      form.append('file', blob, filename);
+      const apiRes = await fetch('/api/floor-plan/elements?engine=pattern', { method: 'POST', body: form });
+      const data = await apiRes.json().catch(() => null);
+      if (!apiRes.ok) {
+        throw new Error(data?.detail ?? data?.error ?? '像素分析');
+      }
+      props.onElementsChange?.(data);
+    } catch (e) {
+      setElementsError(e instanceof Error ? e.message : '像素分析失败');
+      props.onElementsChange?.(null);
+    } finally {
+      setElementsLoading(false);
+    }
+  }, [currentImage, props.onElementsChange]);
 
   const floorLabel = `${props.floor}F`;
   const devicesOnFloor = useMemo(() => props.devices.filter((d) => d.floor === props.floor), [props.devices, props.floor]);
@@ -149,8 +167,8 @@ export function Indoor2D(props: {
                 className={`wm-btn wm-btn-ghost ${currentImage === value ? 'wm-btn-primary' : ''}`}
                 style={{ fontSize: 12, padding: '4px 8px' }}
                 onClick={() => {
-                  setCurrentImage(value);
-                  setElements(null);
+                  props.onCurrentImageChange?.(value);
+                  props.onElementsChange?.(null);
                 }}
                 title={value}
               >
@@ -173,9 +191,17 @@ export function Indoor2D(props: {
             className="wm-btn wm-btn-ghost"
             onClick={handleRenderOpencv}
             disabled={elementsLoading}
-            title="使用 generate_2d_opencv 逻辑opencv渲染墙体（不调用 LLM）"
+            title="颜色+线宽区分墙体（generate_2d_opencv）"
           >
-            {elementsLoading ? '渲染中…' : 'opencv渲染'}
+            opencv渲染
+          </button>
+          <button
+            className="wm-btn wm-btn-ghost"
+            onClick={handleRenderPattern}
+            disabled={elementsLoading}
+            title="像素级图案分析：预处理→ANSI31/AR-CONC/SOLID→几何验证（wall.md）"
+          >
+            {elementsLoading ? '分析中…' : '像素分析'}
           </button>
         </div>
       </div>
