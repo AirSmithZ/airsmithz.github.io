@@ -11,6 +11,7 @@ declare global {
       scrollWheelZoom?: boolean;
       pitch?: number;
       rotation?: number;
+      rotateEnable?: boolean;
       showBuildingBlock?: boolean;
       layers?: unknown[];
     }
@@ -29,13 +30,22 @@ declare global {
     class Buildings {
       constructor(options?: BuildingsOptions);
     }
-    interface LngLat {
+    class LngLat {
       constructor(lng: number, lat: number);
       toJSON(): [number, number];
     }
+    interface ControlBarOptions {
+      position?: { left?: string; right?: string; top?: string; bottom?: string };
+    }
+    class ControlBar {
+      constructor(options?: ControlBarOptions);
+    }
     class Map {
       constructor(container: string | HTMLElement, options?: MapOptions);
-      add(overlay: Polygon | Buildings): void;
+      AmbientLight?: Lights.AmbientLight;
+      DirectionLight?: Lights.DirectionLight;
+      add(overlay: Polygon | Buildings | Object3DLayer): void;
+      addControl(control: ControlBar): void;
       remove(overlay: unknown): void;
       getZoom(): number;
       getCenter(): LngLat;
@@ -48,6 +58,46 @@ declare global {
       constructor(options: PolygonOptions);
       setOptions(opts: Partial<PolygonOptions>): void;
       on(type: string, callback: () => void): void;
+    }
+    class Object3DLayer {
+      constructor();
+      add(obj: unknown): void;
+      remove(obj: unknown): void;
+    }
+    namespace Lights {
+      class AmbientLight {
+        constructor(color: [number, number, number], intensity: number);
+      }
+      class DirectionLight {
+        constructor(direction: [number, number, number], color: [number, number, number], intensity: number);
+      }
+    }
+    namespace Object3D {
+      interface PrismOptions {
+        path: LngLat[];
+        height: number;
+        color?: string;
+      }
+      class Prism {
+        constructor(options: PrismOptions);
+        transparent: boolean;
+      }
+    }
+    class GltfLoader {
+      load(url: string, callback: (gltfObj: GltfObject) => void): void;
+    }
+    interface GltfObject {
+      setOption(opts: {
+        position: LngLat;
+        scale?: number;
+        height?: number;
+        scene?: number;
+      }): void;
+      rotateX(deg: number): void;
+      rotateZ(deg: number): void;
+    }
+    interface Map {
+      plugin(plugins: string[], callback: () => void): void;
     }
   }
   interface Window {

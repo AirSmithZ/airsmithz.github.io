@@ -11,6 +11,9 @@ importers:
       '@amap/amap-jsapi-loader':
         specifier: ^1.0.1
         version: 1.0.1
+      '@amap/three-layer':
+        specifier: ^0.0.4
+        version: 0.0.4
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -74,6 +77,13 @@ packages:
 
   '@amap/amap-jsapi-loader@1.0.1':
     resolution: {integrity: sha512-nPyLKt7Ow/ThHLkSvn2etQlUzqxmTVgK7bIgwdBRTg2HK5668oN7xVxkaiRe3YZEzGzfV2XgH5Jmu2T73ljejw==}
+
+  '@amap/amap-jsapi-types@0.0.8':
+    resolution: {integrity: sha512-q0FyZDIJcXjsMLGc3oS9rjfJsErOvt9rcp6AgzY4k14vo7bBhdq4eKwoSdVp/pYjR/rfaKBns5v10ycZOFwf/A==}
+
+  '@amap/three-layer@0.0.4':
+    resolution: {integrity: sha512-2/0duAm0jnXHj69jRorszcUy4vQ8y9vL58lqmcCtrXXMgOBr/wZIoXSVvcAdT2jUevfmb12ViXaBMVhHKSLQFQ==}
+    engines: {node: '>= 16'}
 
   '@babel/code-frame@7.28.6':
     resolution: {integrity: sha512-JYgintcMjRiCvS8mMECzaEn+m3PfoQiyqukOMCCVQtoJGYJw8j/8LBJEiqkHLkfwCcs74E3pbAUFNg7d9VNJ+Q==}
@@ -638,6 +648,9 @@ packages:
   '@types/stats.js@0.17.4':
     resolution: {integrity: sha512-jIBvWWShCvlBqBNIZt0KAshWpvSjhkwkEu4ZUcASoAvhmrgAUI2t1dXrjSL4xXVLB4FznPrIsX3nKXFl/Dt4vA==}
 
+  '@types/three@0.143.0':
+    resolution: {integrity: sha512-c5PonXOt8xk5q4ygmyjOX4Ec+FA7gwfdcMT/PveE9xrJs/0DDcf2lJkWrhEcmvx2ZefQCQBcogABnGqB0P4OsA==}
+
   '@types/three@0.182.0':
     resolution: {integrity: sha512-WByN9V3Sbwbe2OkWuSGyoqQO8Du6yhYaXtXLoA5FkKTUJorZ+yOHBZ35zUUPQXlAKABZmbYp5oAqpA4RBjtJ/Q==}
 
@@ -1153,6 +1166,9 @@ packages:
     peerDependencies:
       three: '>=0.128.0'
 
+  three@0.143.0:
+    resolution: {integrity: sha512-oKcAGYHhJ46TGEuHjodo2n6TY2R6lbvrkp+feKZxqsUL/WkH7GKKaeu6RHeyb2Xjfk2dPLRKLsOP0KM2VgT8Zg==}
+
   three@0.182.0:
     resolution: {integrity: sha512-GbHabT+Irv+ihI1/f5kIIsZ+Ef9Sl5A1Y7imvS5RQjWgtTPfPnZ43JmlYI7NtCRDK9zir20lQpfg8/9Yd02OvQ==}
 
@@ -1304,6 +1320,14 @@ packages:
 snapshots:
 
   '@amap/amap-jsapi-loader@1.0.1': {}
+
+  '@amap/amap-jsapi-types@0.0.8': {}
+
+  '@amap/three-layer@0.0.4':
+    dependencies:
+      '@amap/amap-jsapi-types': 0.0.8
+      '@types/three': 0.143.0
+      three: 0.143.0
 
   '@babel/code-frame@7.28.6':
     dependencies:
@@ -1789,6 +1813,10 @@ snapshots:
       csstype: 3.2.3
 
   '@types/stats.js@0.17.4': {}
+
+  '@types/three@0.143.0':
+    dependencies:
+      '@types/webxr': 0.5.24
 
   '@types/three@0.182.0':
     dependencies:
@@ -2306,6 +2334,8 @@ snapshots:
       fflate: 0.6.10
       potpack: 1.0.2
       three: 0.182.0
+
+  three@0.143.0: {}
 
   three@0.182.0: {}
 

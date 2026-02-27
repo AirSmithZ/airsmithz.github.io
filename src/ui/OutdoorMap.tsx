@@ -1,7 +1,9 @@
 /// <reference path="../amap.d.ts" />
+/// <reference path="../amap-three-layer.d.ts" />
 import { useEffect, useMemo, useRef, useState } from 'react';
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- types from src/amap.d.ts when pkg not installed
 import AMapLoader from '@amap/amap-jsapi-loader';
+import { ThreeLayer, ThreeGltf } from '@amap/three-layer';
+import { AmbientLight } from 'three';
 
 import type { Building, LatLng } from './types';
 
@@ -11,7 +13,7 @@ const AMAP_SECURITY_CODE = '28c7a106d5debb23bf94f58056466abb';
 const MOCK_BUILDING: Building = {
   id: 'building-a',
   name: 'Building A',
-  center: [31.2304, 121.4737],
+  center: [31.2280, 121.4737],
 };
 
 /** [lat, lng] -> [lng, lat] for 高德 */
@@ -37,6 +39,8 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<AMap.Map | null>(null);
   const polygonRef = useRef<AMap.Polygon | null>(null);
+  const threeLayerRef = useRef<ThreeLayer | null>(null);
+  const threeGltfRef = useRef<ThreeGltf | null>(null);
   const onBuildingClickRef = useRef(props.onBuildingClick);
   onBuildingClickRef.current = props.onBuildingClick;
   const [zoom, setZoom] = useState(15);
@@ -66,6 +70,7 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
     AMapLoader.load({
       key: AMAP_KEY,
       version: '2.0',
+      plugins: ['AMap.ControlBar'],
     })
       .then((AMap: typeof globalThis.AMap) => {
         const is3D = zoom >= 17;
@@ -74,29 +79,14 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
           zoom,
           viewMode: '3D',
           scrollWheelZoom: true,
+          rotateEnable: false,
           showBuildingBlock: false,
           pitch: is3D ? PITCH_3D : 0,
         });
         mapRef.current = map;
 
-        try {
-          if (AMap.Lights?.AmbientLight) {
-            map.AmbientLight = new AMap.Lights.AmbientLight([1, 1, 1], 0.6);
-            map.DirectionLight = new AMap.Lights.DirectionLight([0, 0, 1], [1, 1, 1], 1);
-          }
-          const prismPath = polygonPath.map(([lng, lat]) => new AMap.LngLat(lng, lat));
-          const object3DLayer = new AMap.Object3DLayer();
-          const prism = new AMap.Object3D.Prism({
-            path: prismPath,
-            height: 60,
-            color: 'rgba(14, 165, 233, 0.5)',
-          });
-          prism.transparent = true;
-          object3DLayer.add(prism);
-          map.add(object3DLayer);
-        } catch (e) {
-          console.warn('AMap 3D Prism:', e);
-        }
+        // 注：AMap JSAPI 2.0 已移除 Object3DLayer、Object3D.Prism、GltfLoader（1.x 旧 API）
+        // 3D 模型需使用 GLCustomLayer + Three.js 或 @amap/three-layer 实现
 
         const polygon = new AMap.Polygon({
           path: polygonPath,
@@ -120,6 +110,30 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
           });
           map.add(buildingsLayer);
         }
+
+        // 添加旋转/俯仰控制条（右上角）
+        const controlBar = new AMap.ControlBar({
+          position: { right: '12px', top: '12px' },
+        });
+        map.addControl(controlBar);
+
+        // 使用 @amap/three-layer 加载 3D 模型，仅在 zoom >= 17 时显示
+        const threeLayer = new ThreeLayer(map, {
+          zooms: [17, 20],
+          zIndex: 130,
+        });
+        threeLayerRef.current = threeLayer;
+        threeLayer.on('complete', () => {
+          const light = new AmbientLight('#ffffff', 1);
+          threeLayer.add(light);
+          const gltf = new ThreeGltf(threeLayer, {
+            url: '/futuristic_building/scene.gltf',
+            position: amapCenter,
+            scale: 10,
+            rotation: { x: 90, y: 0, z: 0 },
+          });
+          threeGltfRef.current = gltf;
+        });
 
         map.on('zoomend', () => {
           const newZ = map.getZoom();
@@ -149,6 +163,10 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
       .catch((e: unknown) => console.error('AMap load error:', e));
 
     return () => {
+      threeGltfRef.current?.destroy();
+      threeGltfRef.current = null;
+      threeLayerRef.current?.destroy();
+      threeLayerRef.current = null;
       mapRef.current?.destroy();
       mapRef.current = null;
       polygonRef.current = null;
