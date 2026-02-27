@@ -13,7 +13,7 @@ const AMAP_SECURITY_CODE = '28c7a106d5debb23bf94f58056466abb';
 const MOCK_BUILDING: Building = {
   id: 'building-a',
   name: 'Building A',
-  center: [31.2280, 121.4737],
+  center: [31.2290, 121.4737],
 };
 
 /** [lat, lng] -> [lng, lat] for 高德 */
@@ -163,9 +163,17 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
       .catch((e: unknown) => console.error('AMap load error:', e));
 
     return () => {
-      threeGltfRef.current?.destroy();
+      try {
+        threeGltfRef.current?.destroy();
+      } catch {
+        // ThreeGltf 可能尚未加载完成，object 为 undefined
+      }
       threeGltfRef.current = null;
-      threeLayerRef.current?.destroy();
+      try {
+        threeLayerRef.current?.destroy();
+      } catch {
+        // ThreeLayer 可能尚未完成 init，scene 为 undefined 时 clearScene 会抛错
+      }
       threeLayerRef.current = null;
       mapRef.current?.destroy();
       mapRef.current = null;

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Indoor2D } from './Indoor2D';
 import { Indoor3D } from './Indoor3D';
-import { OutdoorMap } from './OutdoorMap';
+import { OutdoorMapSwitcher } from './OutdoorMapSwitcher';
 import { DevicePalette, type DeviceKind } from './DevicePalette';
 import { Segmented } from './Segmented';
 import type { Building, DevicePlacement, ViewMode } from './types';
@@ -269,7 +269,7 @@ export function App() {
 
           <main className="wm-stage">
             <div className="wm-stage-surface" ref={dropRef}>
-              {mode === 'outdoor' && <OutdoorMap onBuildingClick={handleBuildingClick} />}
+              {mode === 'outdoor' && <OutdoorMapSwitcher onBuildingClick={handleBuildingClick} />}
               {mode === 'indoor2d' && (
                 <Indoor2D
                   building={selectedBuilding ?? DEFAULT_BUILDING}
