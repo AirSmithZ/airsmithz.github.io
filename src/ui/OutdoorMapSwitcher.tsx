@@ -36,7 +36,7 @@ export function OutdoorMapSwitcher(props: { onBuildingClick: (b: Building) => vo
           className={provider === 'openlayers' ? 'wm-seg-btn wm-seg-btn-active' : 'wm-seg-btn'}
           onClick={() => setProvider('openlayers')}
         >
-          OpenLayers
+          Cesium
         </button>
       </div>
       <div className="wm-map-switcher-content">

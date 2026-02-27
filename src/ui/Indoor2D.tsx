@@ -24,7 +24,7 @@ const CAD_IMAGES = [
   { value: '/CADimages/water2.png', label: 'water2' },
   { value: '/CADimages/water3.png', label: 'water3' },
   { value: '/CADimages/water4.png', label: 'water4' },
-  { value: '/map.png', label: 'map' },
+  // { value: '/map.png', label: 'map' },
 ];
 
 function pointsToStyle(nx: number, ny: number) {
