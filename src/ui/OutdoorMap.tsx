@@ -67,6 +67,12 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
       securityJsCode: AMAP_SECURITY_CODE,
     };
 
+    const gltfUrl = `${import.meta.env.BASE_URL || '/'}futuristic_building/scene.gltf`.replace(/\/+/g, '/');
+    console.log('[OutdoorMap] GLTF URL:', gltfUrl, 'BASE_URL:', import.meta.env.BASE_URL);
+    fetch(gltfUrl, { method: 'HEAD' })
+      .then((r) => console.log('[OutdoorMap] GLTF pre-check (mount):', r.status, r.ok ? 'OK' : 'FAIL'))
+      .catch((e) => console.error('[OutdoorMap] GLTF pre-check (mount) error:', e));
+
     AMapLoader.load({
       key: AMAP_KEY,
       version: '2.0',
@@ -124,19 +130,24 @@ export function OutdoorMap(props: { onBuildingClick: (b: Building) => void }) {
         });
         threeLayerRef.current = threeLayer;
         threeLayer.on('complete', () => {
+          console.log('[OutdoorMap] ThreeLayer complete, zoom:', map.getZoom());
           const light = new AmbientLight('#ffffff', 1);
           threeLayer.add(light);
           const gltf = new ThreeGltf(threeLayer, {
-            url: '/futuristic_building/scene.gltf',
+            url: gltfUrl,
             position: amapCenter,
             scale: 10,
             rotation: { x: 90, y: 0, z: 0 },
+            onLoaded: (scene, animations) => {
+              console.log('[OutdoorMap] ThreeGltf loaded OK, scene:', scene, 'animations:', animations?.length ?? 0);
+            },
           });
           threeGltfRef.current = gltf;
         });
 
         map.on('zoomend', () => {
           const newZ = map.getZoom();
+          if (newZ >= 17) console.log('[OutdoorMap] zoomend: entered 3D range (17+), ThreeLayer complete may fire now');
           setZoom(newZ);
           const newIs3D = newZ >= 17;
           if (polygonRef.current) {
