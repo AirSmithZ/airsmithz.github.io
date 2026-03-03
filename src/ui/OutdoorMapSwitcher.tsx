@@ -1,15 +1,16 @@
 /**
- * 室外地图切换器：高德地图 / MapLibre / OpenLayers
+ * 室外地图切换器：高德地图 / MapLibre / Cesium / OpenStreetMap
  * 提供切换按钮，根据选择渲染对应地图组件
  */
 import { useState } from 'react';
 
-import { OutdoorMap } from './OutdoorMap';
+import { OpenStreetMap } from './OpenStreetMap';
 import { MapLibreMap } from './MapLibreMap';
+import { OutdoorMap } from './OutdoorMap';
 import { OpenLayersMap } from './OpenLayersMap';
 import type { Building } from './types';
 
-export type MapProvider = 'amap' | 'maplibre' | 'openlayers';
+export type MapProvider = 'amap' | 'maplibre' | 'openlayers' | 'osm';
 
 export function OutdoorMapSwitcher(props: { onBuildingClick: (b: Building) => void }) {
   const [provider, setProvider] = useState<MapProvider>('amap');
@@ -38,11 +39,19 @@ export function OutdoorMapSwitcher(props: { onBuildingClick: (b: Building) => vo
         >
           Cesium
         </button>
+        <button
+          type="button"
+          className={provider === 'osm' ? 'wm-seg-btn wm-seg-btn-active' : 'wm-seg-btn'}
+          onClick={() => setProvider('osm')}
+        >
+          OpenStreetMap
+        </button>
       </div>
       <div className="wm-map-switcher-content">
         {provider === 'amap' && <OutdoorMap onBuildingClick={props.onBuildingClick} />}
         {provider === 'maplibre' && <MapLibreMap onBuildingClick={props.onBuildingClick} />}
         {provider === 'openlayers' && <OpenLayersMap onBuildingClick={props.onBuildingClick} />}
+        {provider === 'osm' && <OpenStreetMap onBuildingClick={props.onBuildingClick} />}
       </div>
     </div>
   );

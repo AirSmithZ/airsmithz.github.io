@@ -40,13 +40,26 @@ declare global {
     class ControlBar {
       constructor(options?: ControlBarOptions);
     }
+    /** 标准瓦片图层，getTileUrl 支持字符串模板 [x][y][z] */
+    interface TileLayerOptions {
+      getTileUrl?: string | ((x: number, y: number, z: number) => string);
+      zIndex?: number;
+      zooms?: [number, number];
+    }
+    class TileLayer {
+      constructor(options?: TileLayerOptions);
+      setMap(map: Map | null): void;
+    }
     class Map {
       constructor(container: string | HTMLElement, options?: MapOptions);
       AmbientLight?: Lights.AmbientLight;
       DirectionLight?: Lights.DirectionLight;
       add(overlay: Polygon | Buildings | Object3DLayer): void;
+      addLayer(layer: unknown): void;
       addControl(control: ControlBar): void;
       remove(overlay: unknown): void;
+      /** 设置底图图层，用于切换底图 */
+      setLayers(layers: unknown[]): void;
       getZoom(): number;
       getCenter(): LngLat;
       /** 设置俯仰角，immediately=false 时带动画，duration 为动画时长(ms) */
@@ -99,6 +112,8 @@ declare global {
     interface Map {
       plugin(plugins: string[], callback: () => void): void;
     }
+    /** 创建默认底图图层 */
+    function createDefaultLayer(): unknown;
   }
   interface Window {
     _AMapSecurityConfig?: { securityJsCode: string };

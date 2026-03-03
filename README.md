@@ -144,8 +144,3 @@ uvicorn main:app --reload --port 3001
 - **GLB**：管线入口可将 GLB 转为与 §4.1 一致的 FloorPlan，或与 PNG 结果融合。
 - **CAD/矢量**：可增加与「图像解析」同级的输入解析，输出同一中间格式，再由语义补全/几何归一化/导出统一处理。
 - 前端只消费 **FloorPlan JSON**，不关心来源（PNG、GLB 或 CAD）。
-
-
-
-1.离线部署
-2.是否支持3d地图转换
