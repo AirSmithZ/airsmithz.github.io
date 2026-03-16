@@ -1,48 +1,64 @@
-import { useEffect, useMemo } from "react";
-import { renderLevelThumbnail } from "../data/levels";
-import "./LevelSelect.css";
+import { LEVELS, LEVEL_META } from "../data/levels";
+import { safeLevelPreview } from "../utils/levelUtils";
 
-export default function LevelSelect({ clearedLevels, onSelect, onBack }) {
-  const thumbnails = useMemo(() => {
-    const map = {};
-    for (let i = 1; i <= 6; i++) {
-      map[i] = renderLevelThumbnail(i);
-    }
-    return map;
-  }, []);
+const STORAGE_KEY = "gravity-maze-cleared";
+
+function getClearedLevel() {
+  try {
+    const v = parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
+    return Math.min(Math.max(0, v), 6);
+  } catch {
+    return 0;
+  }
+}
+
+function setClearedLevel(n) {
+  try {
+    localStorage.setItem(STORAGE_KEY, String(Math.min(n, 6)));
+  } catch (_) {}
+}
+
+export { getClearedLevel, setClearedLevel };
+
+export default function LevelSelect({ onSelect, onBack, cleared }) {
+  const clearedVal = cleared ?? getClearedLevel();
+  const maxUnlocked = clearedVal;
 
   return (
-    <div className="level-select">
-      <button type="button" className="pixel-btn level-back" onClick={onBack}>
-        ← 返回
-      </button>
-      <h2 className="level-select-title">选择关卡</h2>
+    <div className="pixel-page level-select-page">
+      <h1 className="pixel-title">选择关卡</h1>
       <div className="level-grid">
-        {[1, 2, 3, 4, 5, 6].map((id) => {
-          const unlocked = id === 1 || clearedLevels.includes(id - 1);
-          const cleared = clearedLevels.includes(id);
-          const difficulty = id <= 3 ? "简单" : "困难";
-
+        {LEVEL_META.map((meta, i) => {
+          // const unlocked = i <= maxUnlocked;
+          const unlocked = true;
+          const done = i < clearedVal;
+          const grid = LEVELS[i];
+          const preview = grid ? safeLevelPreview(grid) : null;
           return (
             <button
-              key={id}
+              key={meta.id}
               type="button"
-              className={`level-card ${!unlocked ? "locked" : ""}`}
+              className={`pixel-btn level-card ${unlocked ? "" : "locked"}`}
+              onClick={() => unlocked && onSelect(i)}
               disabled={!unlocked}
-              onClick={() => unlocked && onSelect(id)}
             >
-              <div className="level-thumb">
-                {thumbnails[id] && (
-                  <img src={thumbnails[id]} alt={`关卡 ${id}`} width={64} height={64} />
-                )}
+              <div className="level-preview">
+                {preview && <img src={preview} width={64} height={64} alt="" />}
               </div>
-              <span className="level-id">{id} / 6</span>
-              <span className={`level-diff ${id <= 3 ? "easy" : "hard"}`}>{difficulty}</span>
-              {cleared && <span className="level-cleared">✓</span>}
+              <span className="level-name">{meta.name}</span>
+              <span className={`level-difficulty ${meta.difficulty}`}>
+                {meta.difficulty === "easy" ? "简单" : "困难"}
+              </span>
+              {done && <span className="level-done">✓</span>}
             </button>
           );
         })}
       </div>
+      {onBack && (
+        <button type="button" className="pixel-btn back-btn" onClick={onBack}>
+          返回
+        </button>
+      )}
     </div>
   );
 }

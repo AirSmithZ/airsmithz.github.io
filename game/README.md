@@ -1,57 +1,16 @@
-# Kaboom.js 小游戏
+# React + Vite
 
-基于 React + Vite + Kaboom.js 的纯前端小游戏项目。
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 技术栈
+Currently, two official plugins are available:
 
-- **React 19** - 前端框架
-- **Vite 8** - 构建工具
-- **Kaboom.js** - 游戏引擎
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## 开发
+## React Compiler
 
-```bash
-npm install
-npm run dev
-```
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-访问 http://localhost:5173/ 查看游戏。
+## Expanding the ESLint configuration
 
-## 构建
-
-```bash
-npm run build
-```
-
-输出在 `dist/` 目录。
-
-## 项目结构
-
-```
-game/
-├── src/
-│   ├── components/
-│   │   ├── Game.jsx    # Kaboom 游戏主组件
-│   │   └── Game.css
-│   ├── App.jsx
-│   ├── App.css
-│   ├── main.jsx
-│   └── index.css
-├── package.json
-└── vite.config.js
-```
-
-## 当前功能
-
-- 基础 Kaboom 游戏场景
-- 使用方向键或 WASD 移动的蓝色方块
-- 边界碰撞限制
-
-## 扩展建议
-
-可在 `src/components/Game.jsx` 的 `k.scene("main", () => {...})` 内扩展游戏逻辑，如：
-
-- 添加精灵图 `loadSprite()`
-- 添加更多场景 `k.scene()`
-- 物理系统 `body()`, `area()`, `onCollide()`
-- 音效与背景音乐
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

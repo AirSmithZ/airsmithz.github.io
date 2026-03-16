@@ -1,6 +1,5 @@
 /* 像素风 UI - 重力迷宫 */
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
-
+/* 使用系统等宽字体，避免 Google Fonts 超时（如网络受限环境） */
 :root {
   --pixel-bg: #0d1117;
   --pixel-panel: #161b22;
@@ -22,9 +21,10 @@ body {
   margin: 0;
   background: var(--pixel-bg);
   color: var(--pixel-text);
-  font-family: "Press Start 2P", monospace;
+  font-family: "Courier New", "Consolas", "Liberation Mono", monospace;
+  font-size: 16px;
   -webkit-font-smoothing: none;
-  font-smoothing: none;
+  image-rendering: pixelated;
   min-height: 100svh;
 }
 
@@ -33,29 +33,30 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
 
 .app-root {
+  flex: 1;
   width: 100%;
-  max-width: 400px;
+  max-width: 480px;
   padding: 16px;
 }
 
-/* 像素页通用 */
+/* 页面容器 */
 .pixel-page {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  padding: 24px;
+  padding: 32px 16px;
+  min-height: 100%;
 }
 
 .pixel-title {
   font-size: 24px;
+  margin: 0;
   color: var(--pixel-text);
   text-align: center;
-  margin: 0 0 8px;
 }
 
 .pixel-subtitle {
@@ -63,6 +64,9 @@ body {
   color: var(--pixel-muted);
   margin: 0;
 }
+
+.pixel-title.success { color: var(--pixel-success); }
+.pixel-title.fail { color: var(--pixel-danger); }
 
 /* 按钮 */
 .pixel-btn {
@@ -73,8 +77,8 @@ body {
   background: var(--pixel-panel);
   color: var(--pixel-text);
   cursor: pointer;
-  box-shadow: 4px 4px 0 var(--pixel-border);
   transition: none;
+  box-shadow: 4px 4px 0 var(--pixel-border);
 }
 
 .pixel-btn:hover:not(:disabled) {
@@ -99,19 +103,15 @@ body {
 }
 
 /* 欢迎页 */
-.welcome-page {
-  gap: 32px;
-}
+.welcome-page { padding-top: 48px; }
 
 /* 关卡选择 */
-.level-select-page {
-  gap: 24px;
-}
-
-.level-grid {
+.level-select-page .level-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .level-card {
@@ -119,11 +119,12 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 96px;
+  padding: 12px;
+  min-height: 120px;
 }
 
 .level-card.locked {
-  filter: grayscale(0.8);
+  opacity: 0.6;
 }
 
 .level-preview {
@@ -131,72 +132,46 @@ body {
   height: 64px;
   background: var(--pixel-path);
   border: 2px solid var(--pixel-border);
-  overflow: hidden;
 }
 
 .level-preview img {
-  width: 100%;
-  height: 100%;
+  width: 64px;
+  height: 64px;
   image-rendering: pixelated;
 }
 
-.level-name {
-  font-size: 10px;
-}
+.level-name { font-size: 10px; }
+.level-difficulty { font-size: 8px; }
+.level-difficulty.easy { color: var(--pixel-success); }
+.level-difficulty.hard { color: var(--pixel-danger); }
+.level-done { color: var(--pixel-success); font-size: 16px; }
 
-.level-difficulty {
-  font-size: 8px;
-  color: var(--pixel-muted);
-}
-
-.level-difficulty.easy {
-  color: var(--pixel-success);
-}
-
-.level-difficulty.hard {
-  color: var(--pixel-danger);
-}
-
-.level-done {
-  color: var(--pixel-success);
-  font-size: 12px;
-}
-
-.back-btn {
-  margin-top: 16px;
-}
+.back-btn { margin-top: 16px; }
 
 /* 游戏页 */
 .game-page {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  width: 100%;
 }
 
 .hud {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
   max-width: min(320px, 80vmin);
-  font-size: 10px;
-  padding: 8px;
-  background: var(--pixel-panel);
-  border: 4px solid var(--pixel-border);
+  padding: 0 8px;
 }
 
-.hud-level,
-.hud-time,
-.hud-gravity {
-  color: var(--pixel-text);
+.hud-level, .hud-gravity {
+  font-size: 10px;
+  color: var(--pixel-muted);
 }
 
-.hud-pause {
-  padding: 8px 16px;
-  font-size: 10px;
-}
+.hud-pause { padding: 8px 16px; font-size: 10px; }
 
 .maze-wrap {
   display: flex;
@@ -205,15 +180,32 @@ body {
   gap: 16px;
 }
 
-.maze-container {
-  aspect-ratio: 1;
+/* 静态样式移入 CSS，减少 MazeGame 渲染时的对象创建 */
+.maze-rotation-viewport {
+  width: min(360px, 90vmin);
+  height: min(360px, 90vmin);
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+}
+
+.maze-container {
+  width: min(320px, 80vmin);
+  height: min(320px, 80vmin);
+  flex-shrink: 0;
+  transform-origin: center center;
+  /* 旋转由 RAF 插值驱动，不再用 transition，避免与 KAPLAY 主循环争抢 */
+  border: 4px solid var(--pixel-border);
+  box-shadow: 4px 4px 0 var(--pixel-border);
 }
 
 .maze-container canvas {
   display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
 }
 
 .virtual-buttons {
@@ -226,37 +218,22 @@ body {
   height: 64px;
   font-size: 24px;
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  touch-action: none; /* 消除移动端 300ms 点击延迟，立即响应触摸 */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  cursor: pointer;
 }
 
 /* 暂停菜单 */
 .pause-menu {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(13, 17, 23, 0.9);
-  z-index: 10;
   justify-content: center;
+  z-index: 100;
+  gap: 16px;
 }
 
 /* 结算页 */
-.result-page .pixel-title.success {
-  color: var(--pixel-success);
-}
-
-.result-page .pixel-title.fail {
-  color: var(--pixel-danger);
-}
-
-.result-time {
-  font-size: 12px;
-  color: var(--pixel-muted);
-}
-
-.result-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
-}
+.result-page { gap: 24px; }
+.result-buttons { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }

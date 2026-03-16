@@ -1,5 +1,5 @@
 /* 像素风 UI - 重力迷宫 */
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap");
 
 :root {
   --pixel-bg: #0d1117;
@@ -11,7 +11,6 @@
   --pixel-success: #3fb950;
   --pixel-danger: #f85149;
   --pixel-wall: #333333;
-  --pixel-path: #000000;
 }
 
 * {
@@ -22,7 +21,7 @@ body {
   margin: 0;
   background: var(--pixel-bg);
   color: var(--pixel-text);
-  font-family: "Press Start 2P", monospace;
+  font-family: "Pixelify Sans", sans-serif;
   -webkit-font-smoothing: none;
   font-smoothing: none;
   min-height: 100svh;
@@ -33,41 +32,49 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
 
 .app-root {
   width: 100%;
   max-width: 400px;
+  min-height: 100svh;
   padding: 16px;
 }
 
-/* 像素页通用 */
+/* 页面通用 */
 .pixel-page {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 24px;
-  padding: 24px;
+  padding: 24px 16px;
 }
 
 .pixel-title {
   font-size: 24px;
-  color: var(--pixel-text);
-  text-align: center;
   margin: 0 0 8px;
+  color: var(--pixel-text);
+  text-shadow: 2px 2px 0 var(--pixel-border);
+}
+
+.pixel-title.success {
+  color: var(--pixel-success);
+}
+
+.pixel-title.fail {
+  color: var(--pixel-danger);
 }
 
 .pixel-subtitle {
-  font-size: 12px;
+  font-size: 16px;
   color: var(--pixel-muted);
-  margin: 0;
+  margin: 0 0 24px;
 }
 
 /* 按钮 */
 .pixel-btn {
   font-family: inherit;
-  font-size: 12px;
+  font-size: 16px;
   padding: 12px 24px;
   border: 4px solid var(--pixel-border);
   background: var(--pixel-panel);
@@ -89,29 +96,32 @@ body {
 
 .pixel-btn.primary-btn {
   background: var(--pixel-accent);
-  color: var(--pixel-bg);
-  border-color: var(--pixel-accent);
+  border-color: #2563eb;
 }
 
-.pixel-btn:disabled {
+.pixel-btn.primary-btn:hover:not(:disabled) {
+  background: #79b8ff;
+}
+
+.pixel-btn:disabled,
+.pixel-btn.locked {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* 欢迎页 */
 .welcome-page {
-  gap: 32px;
+  justify-content: center;
+  min-height: 60vh;
 }
 
 /* 关卡选择 */
-.level-select-page {
-  gap: 24px;
-}
-
-.level-grid {
+.level-select-page .level-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+  width: 100%;
+  max-width: 320px;
 }
 
 .level-card {
@@ -119,17 +129,12 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  min-width: 96px;
-}
-
-.level-card.locked {
-  filter: grayscale(0.8);
+  padding: 12px;
 }
 
 .level-preview {
   width: 64px;
   height: 64px;
-  background: var(--pixel-path);
   border: 2px solid var(--pixel-border);
   overflow: hidden;
 }
@@ -137,15 +142,16 @@ body {
 .level-preview img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
 .level-name {
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .level-difficulty {
-  font-size: 8px;
+  font-size: 12px;
   color: var(--pixel-muted);
 }
 
@@ -159,7 +165,7 @@ body {
 
 .level-done {
   color: var(--pixel-success);
-  font-size: 12px;
+  font-size: 16px;
 }
 
 .back-btn {
@@ -168,11 +174,11 @@ body {
 
 /* 游戏页 */
 .game-page {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
+  width: 100%;
 }
 
 .hud {
@@ -181,21 +187,19 @@ body {
   justify-content: space-between;
   width: 100%;
   max-width: min(320px, 80vmin);
-  font-size: 10px;
-  padding: 8px;
-  background: var(--pixel-panel);
-  border: 4px solid var(--pixel-border);
+  padding: 8px 0;
+  font-size: 16px;
 }
 
 .hud-level,
-.hud-time,
-.hud-gravity {
+.hud-gravity,
+.hud-time {
   color: var(--pixel-text);
 }
 
 .hud-pause {
   padding: 8px 16px;
-  font-size: 10px;
+  font-size: 14px;
 }
 
 .maze-wrap {
@@ -206,10 +210,9 @@ body {
 }
 
 .maze-container {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border: 4px solid var(--pixel-border);
+  box-shadow: 4px 4px 0 var(--pixel-border);
+  overflow: hidden;
 }
 
 .maze-container canvas {
@@ -229,29 +232,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: none; /* 避免触摸时滚动，提升长按体验 */
 }
 
 /* 暂停菜单 */
 .pause-menu {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: rgba(13, 17, 23, 0.9);
-  z-index: 10;
+  background: rgba(13, 17, 23, 0.95);
   justify-content: center;
+  z-index: 10;
+}
+
+.pause-menu .pixel-btn {
+  width: 200px;
 }
 
 /* 结算页 */
-.result-page .pixel-title.success {
-  color: var(--pixel-success);
-}
-
-.result-page .pixel-title.fail {
-  color: var(--pixel-danger);
-}
-
-.result-time {
-  font-size: 12px;
+.result-page .result-time {
+  font-size: 18px;
   color: var(--pixel-muted);
+  margin: 0 0 24px;
 }
 
 .result-buttons {

@@ -10,8 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/pixelify-sans": "^5.2.7",
-    "@fontsource/press-start-2p": "^5.2.7",
     "kaplay": "^3001.0.19",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

@@ -1,339 +1,342 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback, memo } from "react";
 import kaplay from "kaplay";
-import { getTransformedLevel, GRID_SIZE, CELL_SIZE } from "../data/levels";
-import "./MazeGame.css";
+import { LEVELS } from "../data/levels";
+import {
+  findStart,
+  findGoal,
+  getMergedWallsOptimized,
+  getObstacleCells,
+} from "../utils/levelUtils";
 
-const GRAVITY_STRENGTH = 400;
-const MAZE_PX = GRID_SIZE * CELL_SIZE;
-const ROTATE_SPEED = 120; // 度/秒，长按时每秒钟旋转的角度
-// 单例：KAPLAY 只初始化一次，unmount 时移走 canvas 而非 quit，避免 "already initialized" 警告
-let _kaplayCtx = null;
-let _kaplayCanvas = null;
-let _canvasHolder = null;
+const DEBUG_PERF = true; // 性能监控：设为 false 关闭控制台输出
+const CELL_SIZE = 8;
+const MAZE_SIZE = 32 * CELL_SIZE; // 256
+const ROTATE_DELTA = 6;
+const LERP_SPEED = 0.22; // 每帧向目标靠近，旋转与方块运动由同一 RAF 驱动，互不阻塞
 
-function getOrCreateKaplay(container) {
-  if (_kaplayCtx && _kaplayCanvas) {
-    if (_canvasHolder && _kaplayCanvas.parentNode === _canvasHolder) {
-      container.appendChild(_kaplayCanvas);
-    }
-    return _kaplayCtx;
-  }
-  if (!_canvasHolder) {
-    _canvasHolder = document.createElement("div");
-    _canvasHolder.style.cssText = "position:fixed;left:-9999px;top:-9999px;pointer-events:none;";
-    document.body.appendChild(_canvasHolder);
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = MAZE_PX;
-  canvas.height = MAZE_PX;
-  canvas.style.imageRendering = "pixelated";
-  container.appendChild(canvas);
-  _kaplayCanvas = canvas;
-  _kaplayCtx = kaplay({
-    global: false,
-    canvas,
-    width: MAZE_PX,
-    height: MAZE_PX,
-    background: [13, 17, 23],
-  });
-  return _kaplayCtx;
-}
-
-function hideCanvas() {
-  if (_kaplayCanvas && _canvasHolder) {
-    _kaplayCanvas.remove();
-    _canvasHolder.appendChild(_kaplayCanvas);
-  }
-}
-
-// 根据旋转角度（度）计算重力方向：(0,1)=下, (1,0)=右, (0,-1)=上, (-1,0)=左
+/** 重力方向：0°=向下，90°=向右，180°=向上，270°=向左 */
 function gravityFromAngle(deg) {
   const rad = (deg * Math.PI) / 180;
-  return [Math.sin(rad), Math.cos(rad)];
+  return { x: Math.sin(rad), y: Math.cos(rad) };
 }
 
-export default function MazeGame({
+function MazeGame({
   levelId,
   onWin,
   onLose,
   onPause,
+  hudAngleRef,
 }) {
   const containerRef = useRef(null);
-  const angleDisplayRef = useRef(null);
-  const rotationAngleRef = useRef(0);
-  const [rotationAngle, setRotationAngle] = useState(0);
-  const holdDirectionRef = useRef(0); // -1 左, 1 右, 0 未按住
-  const rafIdRef = useRef(null);
-  const lastTimeRef = useRef(0);
-  const lastDomUpdateRef = useRef(0);
+  const gameRef = useRef(null);
+  const currentAngleRef = useRef(0);
+  const targetAngleRef = useRef(0);
 
-  // 用 ref 持有回调，避免 effect 依赖变化导致频繁重建场景（主性能瓶颈之一）
+  const handlePause = useCallback(() => onPause(), [onPause]);
+
+  /** 应用角度到视觉+物理，不触发 React 重渲染 */
+  const applyAngle = useCallback((angle) => {
+    const a = ((angle % 360) + 360) % 360;
+    if (containerRef.current) {
+      containerRef.current.style.transform = `rotate(${a}deg)`;
+    }
+    const k = gameRef.current;
+    if (k) {
+      const g = gravityFromAngle(a);
+      k.setGravityDirection(k.vec2(g.x, g.y));
+    }
+    if (hudAngleRef?.current) {
+      hudAngleRef.current.textContent = Math.round(a) + "°";
+    }
+  }, [hudAngleRef]);
+
+  // 用 ref 保存回调，避免 handleWin/handleLose 变化导致整个游戏销毁重建（解决卡顿）
   const onWinRef = useRef(onWin);
   const onLoseRef = useRef(onLose);
   onWinRef.current = onWin;
   onLoseRef.current = onLose;
 
-  const tick = useCallback(() => {
-    const dir = holdDirectionRef.current;
-    if (dir === 0) {
-      rafIdRef.current = null;
-      return;
-    }
-    const now = performance.now();
-    const dt = (now - lastTimeRef.current) / 1000;
-    lastTimeRef.current = now;
-
-    const delta = ROTATE_SPEED * dt * dir;
-    const next = ((rotationAngleRef.current + delta) % 360 + 360) % 360;
-    rotationAngleRef.current = next;
-
-    // transform 不触发布局，每帧更新保证旋转流畅
-    if (containerRef.current) {
-      containerRef.current.style.transform = `rotate(${next}deg)`;
-    }
-    // 角度文字节流到 ~20fps，减少主线程布局压力
-    if (now - lastDomUpdateRef.current > 50 && angleDisplayRef.current) {
-      lastDomUpdateRef.current = now;
-      angleDisplayRef.current.textContent = `${Math.round(next)}°`;
-    }
-
-    rafIdRef.current = requestAnimationFrame(tick);
-  }, []);
-
-  const handlePointerDown = useCallback(
-    (direction) => (e) => {
-      e.preventDefault();
-      if (holdDirectionRef.current === 0) {
-        lastTimeRef.current = performance.now();
-      }
-      holdDirectionRef.current = direction;
-      if (!rafIdRef.current) {
-        rafIdRef.current = requestAnimationFrame(tick);
-      }
-    },
-    [tick]
-  );
-
-  const handlePointerUp = useCallback(() => {
-    holdDirectionRef.current = 0;
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
-    }
-    setRotationAngle(rotationAngleRef.current);
-  }, []);
-
   useEffect(() => {
-    if (!containerRef.current || !levelId) return;
+    const grid = LEVELS[levelId];
+    if (!grid || !containerRef.current) return;
 
-    const level = getTransformedLevel(levelId, 0);
-    if (!level) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = MAZE_SIZE;
+    canvas.height = MAZE_SIZE;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.display = "block";
+    canvas.style.imageRendering = "pixelated";
+    containerRef.current.appendChild(canvas);
 
-    containerRef.current.innerHTML = "";
-    const k = getOrCreateKaplay(containerRef.current);
-
-    const startTime = Date.now();
-    let gameEnded = false;
-
-    const onKeyDown = (e) => {
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-        e.preventDefault();
-        if (holdDirectionRef.current === 0) {
-          lastTimeRef.current = performance.now();
-        }
-        holdDirectionRef.current = -1;
-        if (!rafIdRef.current) {
-          rafIdRef.current = requestAnimationFrame(tick);
-        }
-      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-        e.preventDefault();
-        if (holdDirectionRef.current === 0) {
-          lastTimeRef.current = performance.now();
-        }
-        holdDirectionRef.current = 1;
-        if (!rafIdRef.current) {
-          rafIdRef.current = requestAnimationFrame(tick);
-        }
-      }
-    };
-    const onKeyUp = (e) => {
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A" || e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-        e.preventDefault();
-        holdDirectionRef.current = 0;
-        if (rafIdRef.current) {
-          cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = null;
-        }
-        setRotationAngle(rotationAngleRef.current);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    window.addEventListener("keyup", onKeyUp);
-
-    k.scene("maze", () => {
-      if (typeof k.setGravity === "function") k.setGravity(0);
-
-      const { grid, start, goal, obstacles, isHard } = level;
-      const cell = CELL_SIZE;
-
-      // 墙体按行合并为连续矩形，大幅减少物理对象数量（几百个 -> 几十个）
-      for (let y = 0; y < GRID_SIZE; y++) {
-        const row = grid[y];
-        let x = 0;
-        while (x < GRID_SIZE) {
-          if (row?.[x] === "1") {
-            let w = 0;
-            while (x + w < GRID_SIZE && row[x + w] === "1") w++;
-            k.add([
-              k.pos(x * cell, y * cell),
-              k.rect(w * cell, cell),
-              k.color(48, 54, 61),
-              k.area(),
-              k.body({ isStatic: true }),
-              "wall",
-            ]);
-            x += w;
-          } else {
-            x++;
-          }
-        }
-      }
-
-      if (isHard) {
-        for (const { x, y } of obstacles) {
-          k.add([
-            k.pos(x * cell, y * cell),
-            k.rect(cell, cell),
-            k.color(248, 81, 73),
-            k.area(),
-            k.body({ isStatic: true }),
-            "obstacle",
-          ]);
-        }
-      }
-
-      const goalSize = 4 * cell;
-      k.add([
-        k.pos(goal.x * cell, goal.y * cell),
-        k.rect(goalSize, goalSize),
-        k.color(63, 185, 80),
-        k.area(),
-        "goal",
-      ]);
-
-      // 1 格方块，适配 1 格宽通道，避免 4 格方块超出边界或卡墙
-      const playerSize = cell;
-      const player = k.add([
-        k.pos(start.x * cell, start.y * cell),
-        k.rect(playerSize, playerSize),
-        k.color(230, 237, 243),
-        k.area(),
-        k.body({ isStatic: false }),
-        "player",
-      ]);
-
-      // 底部物理边界：贴紧画布底部，防止方块在重力作用下掉出（墙体拖住方块）
-      k.add([
-        k.pos(-16, MAZE_PX),
-        k.rect(MAZE_PX + 32, 16),
-        k.area(),
-        k.body({ isStatic: true }),
-        "floor",
-      ]);
-
-      k.onUpdate(() => {
-        if (gameEnded) return;
-        const [gx, gy] = gravityFromAngle(rotationAngleRef.current);
-        // 直接赋值，避免每帧创建 vec2 对象
-        player.vel.x = gx * GRAVITY_STRENGTH;
-        player.vel.y = gy * GRAVITY_STRENGTH;
-
-        const px = player.pos.x;
-        const py = player.pos.y;
-        const margin = playerSize + 8;
-        if (px < -margin || py < -margin || px > MAZE_PX + margin || py > MAZE_PX + margin) {
-          gameEnded = true;
-          onLoseRef.current(Math.floor((Date.now() - startTime) / 1000));
-        }
-      });
-
-      player.onCollide("obstacle", () => {
-        if (!gameEnded) {
-          gameEnded = true;
-          onLoseRef.current(Math.floor((Date.now() - startTime) / 1000));
-        }
-      });
-
-      player.onCollide("goal", () => {
-        if (!gameEnded) {
-          gameEnded = true;
-          onWinRef.current(Math.floor((Date.now() - startTime) / 1000));
-        }
-      });
+    // 推迟到下一事件循环初始化，确保上次 k.quit() 完成后再调用 kaplay()，避免 "already initialized" 警告
+    let cancelled = false;
+    let k = null;
+    const tid = setTimeout(() => {
+      if (cancelled || !containerRef.current?.contains(canvas)) return;
+      k = kaplay({
+      global: false,
+      width: MAZE_SIZE,
+      height: MAZE_SIZE,
+      canvas,
+      scale: 1,
+      background: [13, 17, 23],
+      crisp: true,
     });
 
-    k.go("maze");
+    gameRef.current = k;
+
+    const start = findStart(grid);
+    const goal = findGoal(grid);
+    const walls = getMergedWallsOptimized(grid);
+    const obstacles = getObstacleCells(grid);
+
+    k.setGravity(400);
+    const g = gravityFromAngle(0);
+    k.setGravityDirection(k.vec2(g.x, g.y));
+    containerRef.current.style.transform = "rotate(0deg)";
+    currentAngleRef.current = 0;
+    targetAngleRef.current = 0;
+
+    // 墙体（垂直合并后大幅减少物理体数量，friction:0 光滑无摩擦）
+    walls.forEach(({ x, y, w, h = 1 }) => {
+      k.add([
+        k.rect(w * CELL_SIZE, h * CELL_SIZE),
+        k.pos(x * CELL_SIZE, y * CELL_SIZE),
+        k.anchor("topleft"),
+        k.area(),
+        k.body({ isStatic: true, friction: 0 }),
+        k.color(48, 54, 61),
+        "wall",
+      ]);
+    });
+
+    // 障碍物（仅困难关）
+    obstacles.forEach(({ x, y }) => {
+      k.add([
+        k.rect(CELL_SIZE, CELL_SIZE),
+        k.pos(x * CELL_SIZE, y * CELL_SIZE),
+        k.anchor("topleft"),
+        k.area(),
+        k.body({ isStatic: true, friction: 0, frictionStatic: 0 }),
+        k.color(248, 81, 73),
+        "obstacle",
+      ]);
+    });
+
+    // 终点 4x4（friction:0 光滑）
+    k.add([
+      k.rect(4 * CELL_SIZE, 4 * CELL_SIZE),
+      k.pos(goal.x * CELL_SIZE, goal.y * CELL_SIZE),
+      k.anchor("topleft"),
+      k.area(),
+      k.body({ isStatic: true, friction: 0 }),
+      k.color(63, 185, 80),
+      "goal",
+    ]);
+
+    // 玩家
+    const player = k.add([
+      k.rect(CELL_SIZE, CELL_SIZE),
+      k.pos(
+        start.x * CELL_SIZE + CELL_SIZE / 2,
+        start.y * CELL_SIZE + CELL_SIZE / 2
+      ),
+      k.anchor("center"),
+      k.area(),
+      k.body({ friction: 0, frictionStatic: 0, drag: 0 }),
+      k.color(230, 237, 243),
+      "player",
+    ]);
+
+    let hasEnded = false;
+
+    const safeWin = () => {
+      if (hasEnded) return;
+      hasEnded = true;
+      onWinRef.current();
+    };
+    const safeLose = (reason) => {
+      if (hasEnded) return;
+      hasEnded = true;
+      onLoseRef.current(reason);
+    };
+
+    player.onCollide("goal", safeWin);
+
+    player.onCollide("obstacle", () => safeLose("obstacle"));
+
+    // 掉出边界
+    k.onUpdate(() => {
+      if (hasEnded) return;
+      const pos = player.pos;
+      if (
+        pos.x < -16 ||
+        pos.x > MAZE_SIZE + 16 ||
+        pos.y < -16 ||
+        pos.y > MAZE_SIZE + 16
+      ) {
+        safeLose("fall");
+      }
+    });
+    });
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("keyup", onKeyUp);
-      holdDirectionRef.current = 0;
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = null;
+      cancelled = true;
+      clearTimeout(tid);
+      if (k) {
+        try { k.quit(); } catch (_) {}
       }
-      hideCanvas();
+      canvas.remove();
+      gameRef.current = null;
     };
-  }, [levelId, tick]);
+  }, [levelId]); // 仅 levelId 变化时重建，地图初始化完成后禁止重复渲染
+
+  // RAF 驱动旋转插值：视觉与物理每帧同步，与 KAPLAY 同属一个事件循环，互不阻塞
+  const applyAngleRef = useRef(applyAngle);
+  applyAngleRef.current = applyAngle;
+  useEffect(() => {
+    let rafId = null;
+    let lastNow = performance.now();
+    let frameCount = 0;
+    let applyCount = 0;
+    let lastLogAt = lastNow;
+    const frameDeltas = [];
+    const loop = (now) => {
+      frameCount++;
+      const dt = now - lastNow;
+      lastNow = now;
+      if (DEBUG_PERF && frameDeltas.length < 120) frameDeltas.push(dt);
+      const current = currentAngleRef.current;
+      const target = targetAngleRef.current;
+      let diff = ((target - current + 540) % 360) - 180; // 取最短旋转方向
+      if (Math.abs(diff) > 0.5) {
+        const next = current + diff * LERP_SPEED;
+        currentAngleRef.current = next;
+        applyAngleRef.current(next);
+        applyCount++;
+      }
+      if (DEBUG_PERF && now - lastLogAt >= 2000) {
+        const fps = frameCount / ((now - lastLogAt) / 1000);
+        const avgDt = frameDeltas.length ? frameDeltas.reduce((a, b) => a + b, 0) / frameDeltas.length : 0;
+        const maxDt = frameDeltas.length ? Math.max(...frameDeltas) : 0;
+        let objCount = 0;
+        let kapDt = "N/A";
+        try {
+          const k = gameRef.current;
+          if (k?.get) objCount = k.get("*")?.length ?? 0;
+          if (k?.dt) kapDt = (k.dt() * 1000).toFixed(2) + "ms";
+        } catch (_) {}
+        console.log("[MazeGame 性能]", {
+          FPS: fps.toFixed(1),
+          帧间隔ms: avgDt.toFixed(2),
+          最大帧间隔ms: maxDt.toFixed(2),
+          插值次数: applyCount,
+          游戏对象数: objCount,
+          KAPLAY_dt: kapDt,
+        });
+        frameCount = 0;
+        applyCount = 0;
+        frameDeltas.length = 0;
+        lastLogAt = now;
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
+  // 键盘控制：仅更新目标角度，由 RAF 插值
+  useEffect(() => {
+    const ROTATE_SPEED = 3;
+    const handleKeyDown = (e) => {
+      if (["a", "A", "ArrowLeft"].includes(e.key)) {
+        e.preventDefault();
+        targetAngleRef.current = (targetAngleRef.current - ROTATE_SPEED + 360) % 360;
+      } else if (["d", "D", "ArrowRight"].includes(e.key)) {
+        e.preventDefault();
+        targetAngleRef.current = (targetAngleRef.current + ROTATE_SPEED) % 360;
+      } else if (e.key === "Escape" || e.key === "p") {
+        e.preventDefault();
+        handlePause();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handlePause]);
+
+  const DEG_PER_SECOND = 40; // 按住 1 秒 = 10°
+  const repeatRafRef = useRef(null);
+  const isPressedRef = useRef(false);
+  const pressStartRef = useRef(0);
+  const pressStartTargetRef = useRef(0);
+
+  const stopRepeat = useCallback(() => {
+    isPressedRef.current = false;
+    if (repeatRafRef.current != null) {
+      cancelAnimationFrame(repeatRafRef.current);
+      repeatRafRef.current = null;
+    }
+    // 释放时把目标角度锁定到当前，插值循环立即停止，角度不再变化
+    targetAngleRef.current = currentAngleRef.current;
+  }, []);
+
+  const createRotateHandlers = useCallback(
+    (direction) => {
+      const sign = direction === "left" ? -1 : 1;
+      const loop = (now) => {
+        if (!isPressedRef.current) return;
+        const elapsedSec = (now - pressStartRef.current) / 1000;
+        const deltaDeg = elapsedSec * DEG_PER_SECOND;
+        targetAngleRef.current =
+          (pressStartTargetRef.current + sign * deltaDeg + 360 * 1000) % 360;
+        repeatRafRef.current = requestAnimationFrame(loop);
+      };
+      return {
+        onPointerDown: (e) => {
+          e.preventDefault();
+          isPressedRef.current = true;
+          pressStartRef.current = performance.now();
+          pressStartTargetRef.current = targetAngleRef.current;
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          repeatRafRef.current = requestAnimationFrame(loop);
+        },
+        onPointerUp: (e) => {
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
+          stopRepeat();
+        },
+        onPointerLeave: stopRepeat,
+        onPointerCancel: stopRepeat,
+        onContextMenu: (e) => e.preventDefault(),
+      };
+    },
+    [stopRepeat]
+  );
 
   return (
-    <div className="maze-game">
-      <div className="maze-hud">
-        <span className="maze-level">{levelId} / 6</span>
-        <span className="maze-gravity-indicator">
-          <span className="maze-gravity-angle" ref={angleDisplayRef}>{Math.round(rotationAngle)}°</span>
-        </span>
-        <button type="button" className="pixel-btn pause-btn" onClick={onPause}>
-          暂停
+    <div className="maze-wrap">
+      <div className="maze-rotation-viewport">
+        <div ref={containerRef} className="maze-container" />
+      </div>
+      <div className="virtual-buttons">
+        <button
+          type="button"
+          className="pixel-btn rotate-btn"
+          {...createRotateHandlers("left")}
+        >
+          ←
         </button>
-      </div>
-      <div className="maze-wrap" style={{ "--maze-size": `${MAZE_PX}px` }}>
-        <div
-          ref={(el) => {
-            containerRef.current = el;
-            if (el) el.style.transform = `rotate(${rotationAngleRef.current}deg)`;
-          }}
-          className="maze-canvas-wrap"
-        />
-      </div>
-      <div className="maze-controls">
-        <div className="virtual-keys">
-          <div className="vk-row">
-            <button
-              type="button"
-              className="vk vk-rotate"
-              onPointerDown={handlePointerDown(-1)}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              旋转左
-            </button>
-            <button
-              type="button"
-              className="vk vk-rotate"
-              onPointerDown={handlePointerDown(1)}
-              onPointerUp={handlePointerUp}
-              onPointerLeave={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              旋转右
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          className="pixel-btn rotate-btn"
+          {...createRotateHandlers("right")}
+        >
+          →
+        </button>
       </div>
     </div>
   );
 }
+
+export default memo(MazeGame);

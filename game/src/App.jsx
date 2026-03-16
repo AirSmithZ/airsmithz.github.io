@@ -1,171 +1,75 @@
-import { useState, useCallback } from "react";
-import Welcome from "./components/Welcome";
+import { useState } from "react";
+import WelcomePage from "./components/WelcomePage";
 import LevelSelect from "./components/LevelSelect";
-import MazeGame from "./components/MazeGame";
-import Result from "./components/Result";
-import "./App.css";
-import "./components/PauseMenu.css";
+import GamePage from "./components/GamePage";
+import ResultPage from "./components/ResultPage";
+import { getClearedLevel, setClearedLevel } from "./components/LevelSelect";
 
-function App() {
+export default function App() {
   const [page, setPage] = useState("welcome");
-  const [clearedLevels, setClearedLevels] = useState(() => {
-    try {
-      const s = localStorage.getItem("gravity-maze-cleared");
-      return s ? JSON.parse(s) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentLevel, setCurrentLevel] = useState(1);
-  const [gameResult, setGameResult] = useState(null);
-  const [playTime, setPlayTime] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [levelId, setLevelId] = useState(0);
+  const [retryKey, setRetryKey] = useState(0);
+  const [lastResult, setLastResult] = useState({ success: false });
 
-  const saveCleared = useCallback((levelIds) => {
-    setClearedLevels(levelIds);
-    try {
-      localStorage.setItem("gravity-maze-cleared", JSON.stringify(levelIds));
-    } catch {}
-  }, []);
-
-  const handleStart = useCallback(() => {
-    setPage("levelSelect");
-  }, []);
-
-  const handleSelectLevel = useCallback((levelId) => {
-    setCurrentLevel(levelId);
-    setGameResult(null);
-    setPlayTime(0);
+  const handleStart = () => setPage("levels");
+  const handleBackToWelcome = () => setPage("welcome");
+  const handleSelectLevel = (id) => {
+    setLevelId(id);
     setPage("game");
-  }, []);
-
-  const handleBackFromLevels = useCallback(() => {
-    setPage("welcome");
-  }, []);
-
-  const handleWin = useCallback((timeSeconds) => {
-    setGameResult({ success: true, timeSeconds });
-    setPlayTime(timeSeconds);
+  };
+  const handleWin = () => {
+    setClearedLevel(levelId + 1);
+    setLastResult({ success: true });
     setPage("result");
-    const next = currentLevel + 1;
-    if (!clearedLevels.includes(currentLevel)) {
-      const updated = [...new Set([...clearedLevels, currentLevel])].sort((a, b) => a - b);
-      saveCleared(updated);
-    }
-  }, [currentLevel, clearedLevels, saveCleared]);
-
-  const handleLose = useCallback((timeSeconds = 0) => {
-    setGameResult({ success: false, timeSeconds });
-    setPlayTime(timeSeconds);
+  };
+  const handleLose = () => {
+    setLastResult({ success: false });
     setPage("result");
-  }, []);
-
-  const handleRetry = useCallback(() => {
-    setGameResult(null);
+  };
+  const handleBackToLevels = () => setPage("levels");
+  const handleRetry = () => {
+    setRetryKey((k) => k + 1);
     setPage("game");
-  }, []);
+  };
+  const handleNext = () => {
+    if (levelId < 5) {
+      setLevelId(levelId + 1);
+      setPage("game");
+    } else {
+      setPage("levels");
+    }
+  };
 
-  const handleNext = useCallback(() => {
-    setCurrentLevel((prev) => prev + 1);
-    setGameResult(null);
-    setPage("game");
-  }, []);
-
-  const handleBackFromGame = useCallback(() => {
-    setPage("levelSelect");
-  }, []);
-
-  const handlePause = useCallback(() => {
-    setPaused(true);
-  }, []);
-
-  const handlePauseResume = useCallback(() => {
-    setPaused(false);
-  }, []);
-
-  const handlePauseRestart = useCallback(() => {
-    setPaused(false);
-    setGameResult(null);
-    setPage("game");
-  }, []);
-
-  const handlePauseBack = useCallback(() => {
-    setPaused(false);
-    setPage("levelSelect");
-  }, []);
-
-  if (page === "welcome") {
-    return (
-      <div className="app app-pixel">
-        <Welcome onStart={handleStart} />
-      </div>
-    );
-  }
-
-  if (page === "levelSelect") {
-    return (
-      <div className="app app-pixel">
+  return (
+    <div className="app-root">
+      {page === "welcome" && (
+        <WelcomePage onStart={handleStart} />
+      )}
+      {page === "levels" && (
         <LevelSelect
-          clearedLevels={clearedLevels}
           onSelect={handleSelectLevel}
-          onBack={handleBackFromLevels}
+          onBack={handleBackToWelcome}
+          cleared={getClearedLevel()}
         />
-      </div>
-    );
-  }
-
-  if (page === "game" && !paused) {
-    return (
-      <div className="app app-pixel">
-        <MazeGame
-          levelId={currentLevel}
+      )}
+      {page === "game" && (
+        <GamePage
+          key={`game-${levelId}-${retryKey}`}
+          levelId={levelId}
           onWin={handleWin}
           onLose={handleLose}
-          onPause={handlePause}
-        />
-      </div>
-    );
-  }
-
-  if (paused) {
-    return (
-      <div className="app app-pixel">
-        <div className="pause-overlay">
-          <div className="pause-menu">
-            <h2 className="pause-title">暂停</h2>
-            <div className="pause-actions">
-              <button type="button" className="pixel-btn" onClick={handlePauseResume}>继续游戏</button>
-              <button type="button" className="pixel-btn" onClick={handlePauseRestart}>重新开始</button>
-              <button type="button" className="pixel-btn pixel-btn-secondary" onClick={handlePauseBack}>返回关卡列表</button>
-            </div>
-          </div>
-        </div>
-        <MazeGame
-          levelId={currentLevel}
-          onWin={handleWin}
-          onLose={handleLose}
-          onPause={() => {}}
-        />
-      </div>
-    );
-  }
-
-  if (page === "result" && gameResult) {
-    return (
-      <div className="app app-pixel">
-        <Result
-          success={gameResult.success}
-          timeSeconds={gameResult.timeSeconds}
-          levelId={currentLevel}
-          onNext={handleNext}
+          onBack={handleBackToLevels}
           onRetry={handleRetry}
-          onBack={handleBackFromGame}
         />
-      </div>
-    );
-  }
-
-  return null;
+      )}
+      {page === "result" && (
+        <ResultPage
+          success={lastResult.success}
+          onRetry={handleRetry}
+          onNext={handleNext}
+          onBack={handleBackToLevels}
+        />
+      )}
+    </div>
+  );
 }
-
-export default App;
