@@ -5,6 +5,83 @@
   align-items: center;
 }
 
+.app-pixel {
+  background: var(--pixel-bg);
+  color: var(--pixel-text);
+}
+
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.pause-menu {
+  background: var(--pixel-panel);
+  border: 4px solid var(--pixel-border);
+  box-shadow: 8px 8px 0 var(--pixel-border);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.pause-title {
+  font-family: "Press Start 2P", monospace;
+  font-size: 16px;
+  color: var(--pixel-text);
+  margin: 0;
+}
+
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 200px;
+}
+
+.pixel-btn {
+  font-family: "Press Start 2P", monospace;
+  font-size: 12px;
+  padding: 16px 24px;
+  border: 4px solid var(--pixel-border);
+  background: var(--pixel-panel);
+  color: var(--pixel-text);
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--pixel-border);
+  transition: none;
+}
+
+.pixel-btn:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--pixel-border);
+}
+
+.pixel-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 var(--pixel-border);
+}
+
+.pixel-btn-primary {
+  background: var(--pixel-accent);
+  color: var(--pixel-bg);
+}
+
+.pixel-btn-secondary {
+  background: var(--pixel-panel);
+  color: var(--pixel-text);
+}
+
+.pixel-btn-secondary:hover {
+  background: var(--pixel-border);
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

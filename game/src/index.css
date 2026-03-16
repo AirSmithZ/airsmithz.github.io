@@ -1,4 +1,16 @@
 :root {
+  /* 像素风主题（重力迷宫） */
+  --pixel-bg: #0d1117;
+  --pixel-panel: #161b22;
+  --pixel-border: #30363d;
+  --pixel-text: #e6edf3;
+  --pixel-muted: #8b949e;
+  --pixel-accent: #58a6ff;
+  --pixel-success: #3fb950;
+  --pixel-danger: #f85149;
+  --pixel-wall: #333333;
+  --pixel-path: #000000;
+
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
