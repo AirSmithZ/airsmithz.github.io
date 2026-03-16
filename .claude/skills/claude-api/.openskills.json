@@ -1,0 +1,7 @@
+{
+  "source": "https://github.com/anthropics/skills",
+  "sourceType": "git",
+  "repoUrl": "https://github.com/anthropics/skills",
+  "subpath": "skills/claude-api",
+  "installedAt": "2026-03-16T03:15:46.562Z"
+}
