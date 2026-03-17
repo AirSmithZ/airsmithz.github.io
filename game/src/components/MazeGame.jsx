@@ -6,6 +6,7 @@ import "./MazeGame.css";
 const GRAVITY_STRENGTH = 400;
 const MAZE_PX = GRID_SIZE * CELL_SIZE;
 const ROTATE_SPEED = 120; // 度/秒，长按时每秒钟旋转的角度
+const DEBUG_PERF = false; // 设为 true 时每 2 秒打印性能指标到控制台
 // 单例：KAPLAY 只初始化一次，unmount 时移走 canvas 而非 quit，避免 "already initialized" 警告
 let _kaplayCtx = null;
 let _kaplayCanvas = null;
@@ -46,6 +47,38 @@ function hideCanvas() {
   }
 }
 
+// 2D 矩形合并：将 grid 中连续墙格合并为尽可能大的矩形，大幅减少物理对象
+function mergeWallsIntoRects(grid) {
+  const used = grid.map((row) => row.map(() => false));
+  const rects = [];
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (grid[y]?.[x] !== "1" || used[y][x]) continue;
+      let w = 0;
+      while (x + w < GRID_SIZE && grid[y][x + w] === "1" && !used[y][x + w]) w++;
+      let h = 0;
+      for (let y2 = y; y2 < GRID_SIZE; y2++) {
+        let ok = true;
+        for (let dx = 0; dx < w; dx++) {
+          if (grid[y2]?.[x + dx] !== "1" || used[y2][x + dx]) {
+            ok = false;
+            break;
+          }
+        }
+        if (!ok) break;
+        h++;
+      }
+      rects.push({ x, y, w, h });
+      for (let dy = 0; dy < h; dy++) {
+        for (let dx = 0; dx < w; dx++) {
+          used[y + dy][x + dx] = true;
+        }
+      }
+    }
+  }
+  return rects;
+}
+
 // 根据旋转角度（度）计算重力方向：(0,1)=下, (1,0)=右, (0,-1)=上, (-1,0)=左
 function gravityFromAngle(deg) {
   const rad = (deg * Math.PI) / 180;
@@ -66,6 +99,8 @@ export default function MazeGame({
   const rafIdRef = useRef(null);
   const lastTimeRef = useRef(0);
   const lastDomUpdateRef = useRef(0);
+  const gameRef = useRef(null); // 供性能监控获取 KAPLAY 对象数
+  const tickApplyCountRef = useRef(0);
 
   // 用 ref 持有回调，避免 effect 依赖变化导致频繁重建场景（主性能瓶颈之一）
   const onWinRef = useRef(onWin);
@@ -86,6 +121,7 @@ export default function MazeGame({
     const delta = ROTATE_SPEED * dt * dir;
     const next = ((rotationAngleRef.current + delta) % 360 + 360) % 360;
     rotationAngleRef.current = next;
+    if (DEBUG_PERF) tickApplyCountRef.current = (tickApplyCountRef.current || 0) + 1;
 
     // transform 不触发布局，每帧更新保证旋转流畅
     if (containerRef.current) {
@@ -123,6 +159,52 @@ export default function MazeGame({
     setRotationAngle(rotationAngleRef.current);
   }, []);
 
+  // 性能监控：每 2 秒打印 FPS、帧间隔、游戏对象数等
+  useEffect(() => {
+    if (!DEBUG_PERF) return;
+    let rafId = null;
+    let lastNow = performance.now();
+    let frameCount = 0;
+    let applyCount = 0;
+    let lastLogAt = lastNow;
+    const frameDeltas = [];
+    const loop = (now) => {
+      frameCount++;
+      const dt = now - lastNow;
+      lastNow = now;
+      if (frameDeltas.length < 120) frameDeltas.push(dt);
+      applyCount += tickApplyCountRef.current || 0;
+      tickApplyCountRef.current = 0;
+      if (now - lastLogAt >= 2000) {
+        const fps = frameCount / ((now - lastLogAt) / 1000);
+        const avgDt = frameDeltas.length ? frameDeltas.reduce((a, b) => a + b, 0) / frameDeltas.length : 0;
+        const maxDt = frameDeltas.length ? Math.max(...frameDeltas) : 0;
+        let objCount = 0;
+        let kapDt = "N/A";
+        try {
+          const k = gameRef.current;
+          if (k?.get) objCount = k.get("*")?.length ?? 0;
+          if (k?.dt) kapDt = `${(k.dt() * 1000).toFixed(2)}ms`;
+        } catch (_) {}
+        console.log("[MazeGame 性能]", {
+          FPS: fps.toFixed(1),
+          帧间隔ms: avgDt.toFixed(2),
+          最大帧间隔ms: maxDt.toFixed(2),
+          旋转应用次数: applyCount,
+          游戏对象数: objCount,
+          KAPLAY_dt: kapDt,
+        });
+        frameCount = 0;
+        applyCount = 0;
+        frameDeltas.length = 0;
+        lastLogAt = now;
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   useEffect(() => {
     if (!containerRef.current || !levelId) return;
 
@@ -131,6 +213,7 @@ export default function MazeGame({
 
     containerRef.current.innerHTML = "";
     const k = getOrCreateKaplay(containerRef.current);
+    gameRef.current = k;
 
     const startTime = Date.now();
     let gameEnded = false;
@@ -173,30 +256,37 @@ export default function MazeGame({
     k.scene("maze", () => {
       if (typeof k.setGravity === "function") k.setGravity(0);
 
-      const { grid, start, goal, obstacles, isHard } = level;
+      const { grid, start, goal, obstacles, isHard, bounds = { top: true, bottom: true, left: true, right: true } } = level;
       const cell = CELL_SIZE;
 
-      // 墙体按行合并为连续矩形，大幅减少物理对象数量（几百个 -> 几十个）
-      for (let y = 0; y < GRID_SIZE; y++) {
-        const row = grid[y];
-        let x = 0;
-        while (x < GRID_SIZE) {
-          if (row?.[x] === "1") {
-            let w = 0;
-            while (x + w < GRID_SIZE && row[x + w] === "1") w++;
-            k.add([
-              k.pos(x * cell, y * cell),
-              k.rect(w * cell, cell),
-              k.color(48, 54, 61),
-              k.area(),
-              k.body({ isStatic: true }),
-              "wall",
-            ]);
-            x += w;
-          } else {
-            x++;
-          }
-        }
+      // 2D 矩形合并墙体，大幅减少物理对象数量
+      const wallRects = mergeWallsIntoRects(grid);
+      for (const { x, y, w, h } of wallRects) {
+        k.add([
+          k.pos(x * cell, y * cell),
+          k.rect(w * cell, h * cell),
+          k.color(48, 54, 61),
+          k.area(),
+          k.body({ isStatic: true }),
+          "wall",
+        ]);
+      }
+
+      // 根据 bounds 封闭迷宫四边，后续可对某面设 false 增加开口难度
+      // 底墙加厚（BOTTOM_THICK）防止高速下落时物理穿透（tunneling）
+      const thick = cell;
+      const BOTTOM_THICK = 32; // 底墙需足够厚，避免 vel*dt 单帧穿透（400*0.08≈32）
+      if (bounds.left) {
+        k.add([k.pos(-thick, 0), k.rect(thick, MAZE_PX + thick * 2), k.area(), k.body({ isStatic: true }), "wall"]);
+      }
+      if (bounds.right) {
+        k.add([k.pos(MAZE_PX, 0), k.rect(thick, MAZE_PX + thick * 2), k.area(), k.body({ isStatic: true }), "wall"]);
+      }
+      if (bounds.top) {
+        k.add([k.pos(0, -thick), k.rect(MAZE_PX + thick * 2, thick), k.area(), k.body({ isStatic: true }), "wall"]);
+      }
+      if (bounds.bottom) {
+        k.add([k.pos(0, MAZE_PX), k.rect(MAZE_PX + thick * 2, BOTTOM_THICK), k.area(), k.body({ isStatic: true }), "wall"]);
       }
 
       if (isHard) {
@@ -232,26 +322,33 @@ export default function MazeGame({
         "player",
       ]);
 
-      // 底部物理边界：贴紧画布底部，防止方块在重力作用下掉出（墙体拖住方块）
-      k.add([
-        k.pos(-16, MAZE_PX),
-        k.rect(MAZE_PX + 32, 16),
-        k.area(),
-        k.body({ isStatic: true }),
-        "floor",
-      ]);
+      // 首帧 dt 可能过大导致物理一步把方块推出边界，前几帧不应用重力
+      let updateFrameCount = 0;
+      const SETTLE_FRAMES = 3;
 
       k.onUpdate(() => {
         if (gameEnded) return;
+        updateFrameCount++;
         const [gx, gy] = gravityFromAngle(rotationAngleRef.current);
-        // 直接赋值，避免每帧创建 vec2 对象
-        player.vel.x = gx * GRAVITY_STRENGTH;
-        player.vel.y = gy * GRAVITY_STRENGTH;
+        if (updateFrameCount > SETTLE_FRAMES) {
+          player.vel.x = gx * GRAVITY_STRENGTH;
+          player.vel.y = gy * GRAVITY_STRENGTH;
+        } else {
+          player.vel.x = 0;
+          player.vel.y = 0;
+        }
 
         const px = player.pos.x;
         const py = player.pos.y;
-        const margin = playerSize + 8;
-        if (px < -margin || py < -margin || px > MAZE_PX + margin || py > MAZE_PX + margin) {
+        // 仅在完全超出墙体外边界时判定失败；墙体内（含与地板重叠）不判负
+        const outL = -thick - playerSize;       // 左墙外
+        const outR = MAZE_PX + thick;           // 右墙外
+        const outT = -thick - playerSize;      // 上墙外
+        const outB = MAZE_PX + BOTTOM_THICK;   // 底墙外（地板厚 32px）
+        const outOfBounds =
+          px + playerSize < outL || px > outR ||
+          py + playerSize < outT || py > outB;
+        if (updateFrameCount > SETTLE_FRAMES && outOfBounds) {
           gameEnded = true;
           onLoseRef.current(Math.floor((Date.now() - startTime) / 1000));
         }
@@ -275,6 +372,7 @@ export default function MazeGame({
     k.go("maze");
 
     return () => {
+      gameRef.current = null;
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       holdDirectionRef.current = 0;

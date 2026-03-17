@@ -348,6 +348,9 @@ export function getTransformedLevel(levelId, seed = 0) {
     }
   }
 
+  // 边界封闭配置：根据数据决定四面是否封闭，后续可对某面设 false 增加开口难度
+  const bounds = raw.bounds ?? { top: true, bottom: true, left: true, right: true };
+
   return {
     id: raw.id,
     difficulty: raw.difficulty,
@@ -356,6 +359,7 @@ export function getTransformedLevel(levelId, seed = 0) {
     goal: { x: goalX, y: goalY },
     obstacles,
     isHard: raw.difficulty === "hard",
+    bounds,
   };
 }
 

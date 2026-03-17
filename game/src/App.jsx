@@ -11,7 +11,9 @@ function App() {
   const [clearedLevels, setClearedLevels] = useState(() => {
     try {
       const s = localStorage.getItem("gravity-maze-cleared");
-      return s ? JSON.parse(s) : [];
+      if (!s) return [];
+      const parsed = JSON.parse(s);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }

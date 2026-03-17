@@ -2,7 +2,8 @@ import { useEffect, useMemo } from "react";
 import { renderLevelThumbnail } from "../data/levels";
 import "./LevelSelect.css";
 
-export default function LevelSelect({ clearedLevels, onSelect, onBack }) {
+export default function LevelSelect({ clearedLevels = [], onSelect, onBack }) {
+  const levels = Array.isArray(clearedLevels) ? clearedLevels : [];
   const thumbnails = useMemo(() => {
     const map = {};
     for (let i = 1; i <= 6; i++) {
@@ -19,8 +20,8 @@ export default function LevelSelect({ clearedLevels, onSelect, onBack }) {
       <h2 className="level-select-title">选择关卡</h2>
       <div className="level-grid">
         {[1, 2, 3, 4, 5, 6].map((id) => {
-          const unlocked = id === 1 || clearedLevels.includes(id - 1);
-          const cleared = clearedLevels.includes(id);
+          const unlocked = id === 1 || levels.includes(id - 1);
+          const cleared = levels.includes(id);
           const difficulty = id <= 3 ? "简单" : "困难";
 
           return (
