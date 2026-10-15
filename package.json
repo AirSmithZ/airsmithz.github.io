@@ -1,47 +1,24 @@
 {
-  "name": "web-map-demo",
+  "name": "anz-mobile",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "devDependencies": {
-    "@types/leaflet": "^1.9.21",
-    "@types/react": "^19.2.10",
-    "@types/react-dom": "^19.2.3",
-    "@types/three": "^0.182.0",
-    "@vitejs/plugin-react": "^5.1.2",
-    "eslint": "^9.39.2",
-    "prettier": "^3.8.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.2.4"
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host"
   },
   "dependencies": {
-    "@amap/amap-jsapi-loader": "^1.0.1",
-    "@amap/three-layer": "^0.0.4",
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.5.0",
-    "@techstark/opencv-js": "4.12.0-release.1",
-    "cesium": "^1.138.0",
-    "leaflet": "^1.9.4",
-    "maplibre-gl": "^5.19.0",
-    "ol": "^10.8.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-leaflet": "^5.0.0",
-    "react-map-gl": "^8.1.0",
-    "three": "^0.182.0",
-    "vite-plugin-static-copy": "^3.2.0"
+    "maplibre-gl": "^5.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.0"
   }
 }
