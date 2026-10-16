@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
+import { EXTRA_NOTES, EXTRA_PACKS, SEED_APPS } from './data/prepExtra';
 
-export type PrepKind = 'todo' | 'note' | 'pack';
+export type PrepKind = 'todo' | 'note' | 'pack' | 'app';
 
 export interface TodoItem {
   id: string;
@@ -25,13 +26,22 @@ export interface PackItem {
   packed: boolean;
 }
 
+export interface AppItem {
+  id: string;
+  group: string;
+  name: string;
+  detail: string;
+  installed: boolean;
+}
+
 export const TODO_GROUPS = ['现在', '签证批下之后', '订票、订车', '出发前', '在路上'] as const;
-export const NOTE_CHAPTERS = ['断点', '行李', '紧急', '健康', '天气', '钱和通讯'] as const;
+export const NOTE_CHAPTERS = ['断点', '行李', '紧急', '健康', '天气', '路上', '钱和通讯'] as const;
 
 export function isPrepKind(value: string | null): value is PrepKind {
-  return value === 'todo' || value === 'note' || value === 'pack';
+  return value === 'todo' || value === 'note' || value === 'pack' || value === 'app';
 }
 export const PACK_GROUPS = ['证件', '衣服', '活动', '其余', '不带'] as const;
+export const APP_GROUPS = ['地图', '翻译', '公交', '叫车', '餐厅', '不装'] as const;
 
 export const PREP_META: Record<PrepKind, { title: string; eyebrow: string; blurb: string }> = {
   todo: {
@@ -42,12 +52,17 @@ export const PREP_META: Record<PrepKind, { title: string; eyebrow: string; blurb
   note: {
     title: '参考信息',
     eyebrow: '查阅',
-    blurb: '断点、行李、电话和天气。签证、入境和租车在「更多」里按步骤看。',
+    blurb: '断点、路上、电话和天气。签证、入境和租车在「更多」里按步骤看。',
   },
   pack: {
     title: '携带物品',
     eyebrow: '行李',
     blurb: '4 个人各一份。司机的证件按实际开车的人数。',
+  },
+  app: {
+    title: '要装的 App',
+    eyebrow: '手机',
+    blurb: '出发前装好，离线内容一起下。',
   },
 };
 
@@ -67,7 +82,7 @@ const SEED_TODOS: TodoItem[] = [
   { id: 't13', group: '出发前', text: 'T-14 · 2027-01-26：再看签证、NZeTA、Apex 回复；塔斯曼、米尔福德、联程要已经下单', note: '', done: false },
   { id: 't14', group: '出发前', text: 'T-7 · 2027-02-02：看凯恩斯预报和气旋预警，出海仍把 2 月 19 日空着', note: '', done: false },
   { id: 't15', group: '出发前', text: 'T-3 · 2027-02-06：确认函离线存一份；留下 2 月 21 日凌晨出租车电话', note: '滑板首圈若还没约，这天约', done: false },
-  { id: 't16', group: '出发前', text: 'T-1 · 2027-02-08：纸质证件和云端各一份；卡已开通境外；南岛离线地图下好；号码能打出电话', note: '', done: false },
+  { id: 't16', group: '出发前', text: 'T-1 · 2027-02-08：纸质证件和云端各一份；卡已开通境外；澳洲四城和南岛的离线地图下好；要装的 App 下好离线包；号码能打出电话', note: '', done: false },
   { id: 't17', group: '在路上', text: '2 月 10 日，南航飞机上填澳大利亚入境卡', note: '第一晚地址 Absolute Collins', done: false },
   { id: 't18', group: '在路上', text: '2 月 20 日晚上在凯恩斯填新西兰旅客申报，并订好次日凌晨出租车', note: '只走 travellerdeclaration.govt.nz', done: false },
   { id: 't19', group: '在路上', text: '2 月 23 日上午取车，每个司机带驾照原件和公证书', note: '出示下单用的那张实体卡', done: false },
@@ -136,14 +151,14 @@ const SEED_NOTES: NoteItem[] = [
     chapter: '天气',
     title: '2 月大概什么温度',
     strict: false,
-    body: '下面是 2022 到 2026 年、每年 2 月 9 日到 28 日的平均气温，用来估衣服，不是 2027 年 2 月的天气预报。\n墨尔本白天约 26°、夜里约 15°。霍巴特 23° / 13°。悉尼 26° / 19°。凯恩斯 31° / 24°，大约 10 天里有 7 天下雨。基督城 20° / 13°。皇后镇 21° / 11°。蒂卡波 18° / 8°，冷的清晨可以到 5°。\n带一件抓绒、一件防风防水外套。不带羽绒服。',
+    body: '下面是 2022 到 2026 年、每年 2 月 9 日到 28 日的平均气温，用来估衣服，不是 2027 年 2 月的天气预报。\n墨尔本白天约 26°、夜里约 15°。霍巴特 23° / 13°。悉尼 26° / 19°。凯恩斯 31° / 24°，大约 10 天里有 7 天下雨。基督城 20° / 13°。皇后镇 21° / 11°。蒂卡波 18° / 8°，冷的清晨可以到 5°。\n带一件抓绒、一件防风防水外套。不带羽绒服。长途飞机穿这件抓绒。墨尔本把短袖、薄外套、抓绒按冷热往上加，餐厅空调用那件薄外套。',
   },
   {
     id: 'n29',
     chapter: '天气',
     title: '防晒和水母',
     strict: false,
-    body: '紫外线指数到 3 就涂防晒霜，选 SPF50 或 50+、广谱、防水。出门前 20 分钟涂，两小时后再补，游泳后再补。再戴宽檐帽和墨镜。2 月这几座城市白天都会过这个指数。\n2 月是水母季。没有防蜇网的海滩不要下水。',
+    body: '紫外线指数到 3，衣服、帽子、阴凉、墨镜、防晒霜一起用。长袖防晒衣尽量选 UPF50。防晒霜用 SPF50 或 50+、广谱、防水，出门前 20 分钟涂，两小时后再补，游泳后再补。宽檐帽，墨镜符合澳标。2 月这几座城市白天都会过这个指数。\n2 月是水母季。没有防蜇网的海滩不要下水。',
   },
   {
     id: 'n30',
@@ -157,8 +172,9 @@ const SEED_NOTES: NoteItem[] = [
     chapter: '钱和通讯',
     title: '插头，以及要能打电话',
     strict: false,
-    body: '插座是 I 型：两只扁脚呈倒 V，230 伏。中国那种两只脚平行的扁插头插不进去。充电器铭牌写着 100–240 伏，就不用变压器。\n只买流量、不能通话的 eSIM 不够用。订车、跳伞、凌晨出租车都要能打电话。林迪斯山口和皇冠山脉会没有信号。离开基督城前，把南岛离线地图下到手机里。',
+    body: '插座是 I 型：两只扁脚呈倒 V，230 伏。中国那种两只脚平行的扁插头插不进去。充电器铭牌写着 100–240 伏，就不用变压器。\n只买流量、不能通话的 eSIM 不够用。订车、跳伞、凌晨出租车都要能打电话。漫游打不出电话再买当地卡。林迪斯山口和皇冠山脉会没有信号。出发前把墨尔本、霍巴特、悉尼、凯恩斯和南岛的离线地图下到手机里。',
   },
+  ...EXTRA_NOTES,
 ];
 
 const SEED_PACKS: PackItem[] = [
@@ -180,19 +196,21 @@ const SEED_PACKS: PackItem[] = [
   { id: 'p16', group: '活动', text: '米尔福德：防滑鞋、防水外套、保暖层、含 20%–50% 避蚊胺的驱虫剂。停下来盖住脚踝', packed: false },
   { id: 'p17', group: '活动', text: '鲨鱼快艇：能湿的衣服、毛巾、换洗、手机防水袋', packed: false },
   { id: 'p18', group: '其余', text: '每人一个中国插头转 I 型的转换头，加一个 I 型插口的 USB 排插', packed: false },
-  { id: 'p19', group: '其余', text: '处方药原包装、英文医生信；晕船药', packed: false },
-  { id: 'p20', group: '其余', text: '南岛离线地图，以及一个能打电话的号码', packed: false },
+  { id: 'p19', group: '其余', text: '处方药原包装、英文医生信；晕车药、晕船药。2 月 11 日上车前吃晕车药', packed: false },
+  { id: 'p20', group: '其余', text: '墨尔本、霍巴特、悉尼、凯恩斯和南岛的离线地图，以及一个能打电话的号码', packed: false },
   { id: 'p21', group: '不带', text: '公约国际驾照小册子', packed: false },
   { id: 'p22', group: '不带', text: '新鲜水果、蔬菜、肉、奶、种子', packed: false },
   { id: 'p23', group: '不带', text: '散装中草药、茶叶、枸杞', packed: false },
   { id: 'p24', group: '不带', text: '从成都带的瓶装水和零食。蜂蜜若要带，进澳大利亚时申报', packed: false },
   { id: 'p25', group: '不带', text: '带土的鞋。进墨尔本前洗净；飞新西兰前再洗净，并在旅客申报里申报穿过的户外鞋', packed: false },
+  ...EXTRA_PACKS,
 ];
 
 const KEY: Record<PrepKind, string> = {
   todo: 'anz-prep-todo-v2',
-  note: 'anz-prep-note-v3',
-  pack: 'anz-prep-pack-v2',
+  note: 'anz-prep-note-v4',
+  pack: 'anz-prep-pack-v3',
+  app: 'anz-prep-app-v2',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -238,6 +256,19 @@ function asPack(value: unknown): PackItem | null {
   return { id: value.id, group: value.group, text: value.text, packed: value.packed === true };
 }
 
+function asApp(value: unknown): AppItem | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.group !== 'string' || typeof value.name !== 'string') {
+    return null;
+  }
+  return {
+    id: value.id,
+    group: value.group,
+    name: value.name,
+    detail: typeof value.detail === 'string' ? value.detail : '',
+    installed: value.installed === true,
+  };
+}
+
 function readList<T>(key: string, seed: T[], cast: (value: unknown) => T | null): { items: T[]; ok: boolean } {
   try {
     const raw = localStorage.getItem(key);
@@ -277,6 +308,9 @@ function cloneNotes() {
 function clonePacks() {
   return SEED_PACKS.map((item) => ({ ...item }));
 }
+function cloneApps() {
+  return SEED_APPS.map((item) => ({ ...item }));
+}
 
 function withPrevious<T extends { id: string }>(nextKey: string, previousKey: string, seed: T[], cast: (value: unknown) => T | null): T[] {
   try {
@@ -296,6 +330,7 @@ function withPrevious<T extends { id: string }>(nextKey: string, previousKey: st
       if (!old) return item;
       if ('done' in item && 'done' in old) return { ...item, done: old.done };
       if ('packed' in item && 'packed' in old) return { ...item, packed: old.packed };
+      if ('installed' in item && 'installed' in old) return { ...item, installed: old.installed };
       return item;
     });
     for (const item of previous.values()) {
@@ -308,23 +343,25 @@ function withPrevious<T extends { id: string }>(nextKey: string, previousKey: st
 }
 
 const loadedTodo = readList(KEY.todo, withPrevious(KEY.todo, 'anz-prep-todo-v1', cloneTodos(), asTodo), asTodo);
-const loadedNote = readList(KEY.note, cloneNotes(), asNote);
-const loadedPack = readList(KEY.pack, withPrevious(KEY.pack, 'anz-prep-pack-v1', clonePacks(), asPack), asPack);
+const loadedNote = readList(KEY.note, withPrevious(KEY.note, 'anz-prep-note-v3', cloneNotes(), asNote), asNote);
+const loadedPack = readList(KEY.pack, withPrevious(KEY.pack, 'anz-prep-pack-v2', clonePacks(), asPack), asPack);
+const loadedApp = readList(KEY.app, withPrevious(KEY.app, 'anz-prep-app-v1', cloneApps(), asApp), asApp);
 
 let todos = loadedTodo.items;
 let notes = loadedNote.items;
 let packs = loadedPack.items;
-let storageOk = loadedTodo.ok && loadedNote.ok && loadedPack.ok;
-let snapshot = { todos, notes, packs, storageOk };
+let apps = loadedApp.items;
+let storageOk = loadedTodo.ok && loadedNote.ok && loadedPack.ok && loadedApp.ok;
+let snapshot = { todos, notes, packs, apps, storageOk };
 const listeners = new Set<() => void>();
 
 function emit(): void {
-  snapshot = { todos, notes, packs, storageOk };
+  snapshot = { todos, notes, packs, apps, storageOk };
   listeners.forEach((listener) => listener());
 }
 
 function writeKind(kind: PrepKind): void {
-  const value = kind === 'todo' ? todos : kind === 'note' ? notes : packs;
+  const value = kind === 'todo' ? todos : kind === 'note' ? notes : kind === 'pack' ? packs : apps;
   if (!writeRaw(KEY[kind], value)) storageOk = false;
   emit();
 }
@@ -402,6 +439,28 @@ export const prepActions = {
   resetPacks() {
     packs = clonePacks();
     writeKind('pack');
+  },
+  addApp(group: string, name: string, detail: string) {
+    apps = [...apps, { id: newPrepId('a'), group, name, detail, installed: false }];
+    writeKind('app');
+  },
+  updateApp(id: string, patch: Pick<AppItem, 'group' | 'name' | 'detail'>) {
+    apps = apps.map((item) =>
+      item.id === id ? { ...item, ...patch, installed: patch.group === '不装' ? false : item.installed } : item,
+    );
+    writeKind('app');
+  },
+  toggleApp(id: string) {
+    apps = apps.map((item) => (item.id === id && item.group !== '不装' ? { ...item, installed: !item.installed } : item));
+    writeKind('app');
+  },
+  removeApp(id: string) {
+    apps = apps.filter((item) => item.id !== id);
+    writeKind('app');
+  },
+  resetApps() {
+    apps = cloneApps();
+    writeKind('app');
   },
 };
 

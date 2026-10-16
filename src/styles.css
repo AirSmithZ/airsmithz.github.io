@@ -1471,6 +1471,7 @@ button {
   line-height: 1.4;
 }
 .prep__check small,
+.prep__ban small,
 .prep-note__top small {
   display: block;
   margin-top: 2px;

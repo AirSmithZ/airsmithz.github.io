@@ -257,13 +257,18 @@ function sortByPrimary(nodes: TripNode[], edges: TripEdge[]): TripNode[] {
   return sorted;
 }
 
+function isReferencePin(node: TripNode): boolean {
+  const group = node.scene_group ?? '';
+  return group.startsWith('加油站') || group.startsWith('住宿参考');
+}
+
 function orderedRegionNodes(day: DayPlan, regionNodes: TripNode[]): TripNode[] {
   const ids = new Set(regionNodes.map((node) => node.id));
-  const fuel = regionNodes.filter((node) => node.scene_group?.startsWith('加油站'));
-  const route = regionNodes.filter((node) => !node.scene_group?.startsWith('加油站'));
+  const aside = regionNodes.filter(isReferencePin);
+  const route = regionNodes.filter((node) => !isReferencePin(node));
   const ordered = sortByPrimary(route.length ? route : regionNodes, day.edges).filter((node) => ids.has(node.id));
-  if (!fuel.length || !route.length) return ordered;
-  return [...ordered, ...fuel];
+  if (!aside.length || !route.length) return ordered;
+  return [...ordered, ...aside];
 }
 
 function findEdge(day: DayPlan, from: string, to: string): TripEdge | undefined {

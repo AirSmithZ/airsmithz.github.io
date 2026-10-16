@@ -8,7 +8,7 @@ import { NodePanel } from './components/NodePanel';
 import { PrepBoard } from './components/PrepBoard';
 import { GuideBoard } from './components/GuideBoard';
 import { isGuideId, GUIDES, type GuideId } from './guides';
-import { isPrepKind, type PrepKind } from './prep';
+import { isPrepKind, PREP_META, type PrepKind } from './prep';
 import { readViewportBox } from './compat';
 import type { LayoutLock, PanelId, Scope, TripEdge } from './types';
 
@@ -345,7 +345,7 @@ export function PhoneApp() {
                 }}
               >
                 <b>参考信息</b>
-                <small>断点、行李、电话和天气</small>
+                <small>断点、路上、电话和天气</small>
               </button>
               <button
                 type="button"
@@ -360,6 +360,20 @@ export function PhoneApp() {
               >
                 <b>携带物品</b>
                 <small>要带的，以及不要塞进行李的</small>
+              </button>
+              <button
+                type="button"
+                data-testid="open-apps"
+                onClick={() => {
+                  setMenu(null);
+                  actions.closeDetail();
+                  setDesk(false);
+                  setSide('app');
+                  if (land) setRailOpen(true);
+                }}
+              >
+                <b>要装的 App</b>
+                <small>地图、翻译、公交、叫车和餐厅</small>
               </button>
               <button
                 type="button"
@@ -472,7 +486,7 @@ export function PhoneApp() {
       <PhoneDialog
         sheet
         open={!land && isPrepKind(side)}
-        label={side === 'todo' ? '待办事项' : side === 'note' ? '参考信息' : '携带物品'}
+        label={isPrepKind(side) ? PREP_META[side].title : '准备'}
         onClose={() => setSide(null)}
       >
         {isPrepKind(side) ? <PrepBoard kind={side} mode="port" onClose={() => setSide(null)} /> : null}

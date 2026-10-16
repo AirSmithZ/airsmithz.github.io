@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Check } from './Check';
 import {
+  APP_GROUPS,
   NOTE_CHAPTERS,
   PACK_GROUPS,
   PREP_META,
@@ -8,6 +9,7 @@ import {
   orderedGroups,
   prepActions,
   usePrep,
+  type AppItem,
   type NoteItem,
   type PackItem,
   type PrepKind,
@@ -84,6 +86,15 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
           已放入
         </p>
       ) : null}
+      {kind === 'app' ? (
+        <p className="prep__count">
+          <b>
+            {data.apps.filter((item) => item.group !== '不装' && item.installed).length}/
+            {data.apps.filter((item) => item.group !== '不装').length}
+          </b>
+          已装好
+        </p>
+      ) : null}
 
       {adding ? (
         <PrepForm
@@ -92,7 +103,8 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
           onSave={(draft) => {
             if (draft.kind === 'todo') prepActions.addTodo(draft.group, draft.text, draft.note);
             else if (draft.kind === 'note') prepActions.addNote(draft.chapter, draft.title, draft.body, draft.strict);
-            else prepActions.addPack(draft.group, draft.text);
+            else if (draft.kind === 'pack') prepActions.addPack(draft.group, draft.text);
+            else prepActions.addApp(draft.group, draft.name, draft.detail);
             setAdding(false);
           }}
         />
@@ -120,6 +132,7 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
         />
       ) : null}
       {kind === 'pack' ? <PackList items={data.packs} needleHit={hit} editing={editing} onEdit={setEditing} /> : null}
+      {kind === 'app' ? <AppList items={data.apps} needleHit={hit} editing={editing} onEdit={setEditing} /> : null}
 
       <footer className="prep__foot">
         {askReset ? (
@@ -132,7 +145,8 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
                 onClick={() => {
                   if (kind === 'todo') prepActions.resetTodos();
                   else if (kind === 'note') prepActions.resetNotes();
-                  else prepActions.resetPacks();
+                  else if (kind === 'pack') prepActions.resetPacks();
+                  else prepActions.resetApps();
                   setAskReset(false);
                   setAdding(false);
                   setEditing(null);
@@ -432,6 +446,70 @@ function PackList({
   );
 }
 
+function AppList({
+  items,
+  needleHit,
+  editing,
+  onEdit,
+}: {
+  items: AppItem[];
+  needleHit: (parts: string[]) => boolean;
+  editing: string | null;
+  onEdit: (id: string | null) => void;
+}) {
+  const visible = items.filter((item) => needleHit([item.group, item.name, item.detail]));
+  const groups = orderedGroups(
+    visible.map((item) => item.group),
+    APP_GROUPS,
+  );
+  return (
+    <>
+      {visible.length !== items.length ? <p className="prep__filter">筛出 {visible.length} 条</p> : null}
+      {groups.map((group) => (
+        <section key={group} className={`prep__group${group === '不装' ? ' is-ban' : ''}`}>
+          <h3>{group === '不装' ? '不用装' : group}</h3>
+          <ul>
+            {visible
+              .filter((item) => item.group === group)
+              .map((item) =>
+                editing === item.id ? (
+                  <li key={item.id}>
+                    <PrepForm
+                      kind="app"
+                      initial={item}
+                      onCancel={() => onEdit(null)}
+                      onSave={(draft) => {
+                        if (draft.kind !== 'app') return;
+                        prepActions.updateApp(item.id, { group: draft.group, name: draft.name, detail: draft.detail });
+                        onEdit(null);
+                      }}
+                    />
+                  </li>
+                ) : (
+                  <li key={item.id} className={item.installed ? 'prep__item is-done' : 'prep__item'}>
+                    {item.group === '不装' ? (
+                      <p className="prep__ban">
+                        <b>{item.name}</b>
+                        <small>{item.detail}</small>
+                      </p>
+                    ) : (
+                      <Check className="prep__check" checked={item.installed} onChange={() => prepActions.toggleApp(item.id)}>
+                        <b>{item.name}</b>
+                        <small>{item.detail}</small>
+                      </Check>
+                    )}
+                    <RowActions onEdit={() => onEdit(item.id)} onRemove={() => prepActions.removeApp(item.id)} />
+                  </li>
+                ),
+              )}
+          </ul>
+        </section>
+      ))}
+      {visible.length === 0 ? <p className="empty-note">没有对上的 App。</p> : null}
+    </>
+  );
+}
+
 function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
   return (
     <div className="prep__row-actions">
@@ -448,7 +526,8 @@ function RowActions({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => 
 type Draft =
   | { kind: 'todo'; group: string; text: string; note: string }
   | { kind: 'note'; chapter: string; title: string; body: string; strict: boolean }
-  | { kind: 'pack'; group: string; text: string };
+  | { kind: 'pack'; group: string; text: string }
+  | { kind: 'app'; group: string; name: string; detail: string };
 
 function PrepForm({
   kind,
@@ -457,16 +536,19 @@ function PrepForm({
   onCancel,
 }: {
   kind: PrepKind;
-  initial?: TodoItem | NoteItem | PackItem;
+  initial?: TodoItem | NoteItem | PackItem | AppItem;
   onSave: (draft: Draft) => void;
   onCancel: () => void;
 }) {
   const todo = kind === 'todo' ? (initial as TodoItem | undefined) : undefined;
   const note = kind === 'note' ? (initial as NoteItem | undefined) : undefined;
   const pack = kind === 'pack' ? (initial as PackItem | undefined) : undefined;
-  const [group, setGroup] = useState(todo?.group ?? pack?.group ?? (kind === 'pack' ? PACK_GROUPS[0] : TODO_GROUPS[0]));
-  const [text, setText] = useState(todo?.text ?? pack?.text ?? '');
-  const [extra, setExtra] = useState(todo?.note ?? '');
+  const app = kind === 'app' ? (initial as AppItem | undefined) : undefined;
+  const [group, setGroup] = useState(
+    todo?.group ?? pack?.group ?? app?.group ?? (kind === 'app' ? APP_GROUPS[0] : kind === 'pack' ? PACK_GROUPS[0] : TODO_GROUPS[0]),
+  );
+  const [text, setText] = useState(todo?.text ?? pack?.text ?? app?.name ?? '');
+  const [extra, setExtra] = useState(todo?.note ?? app?.detail ?? '');
   const [chapter, setChapter] = useState(note?.chapter ?? NOTE_CHAPTERS[0]);
   const [title, setTitle] = useState(note?.title ?? '');
   const [body, setBody] = useState(note?.body ?? '');
@@ -483,6 +565,14 @@ function PrepForm({
       onSave({ kind: 'note', chapter: chapter.trim(), title: title.trim(), body: body.trim(), strict });
       return;
     }
+    if (kind === 'app') {
+      if (!text.trim() || !group.trim()) {
+        setError('分组和名称都要填。');
+        return;
+      }
+      onSave({ kind: 'app', group: group.trim(), name: text.trim(), detail: extra.trim() });
+      return;
+    }
     if (!text.trim() || !group.trim()) {
       setError('分组和内容都要填。');
       return;
@@ -491,7 +581,7 @@ function PrepForm({
     else onSave({ kind: 'pack', group: group.trim(), text: text.trim() });
   }
 
-  const groupOptions = kind === 'pack' ? PACK_GROUPS : TODO_GROUPS;
+  const groupOptions = kind === 'app' ? APP_GROUPS : kind === 'pack' ? PACK_GROUPS : TODO_GROUPS;
   return (
     <form className="prep-form" onSubmit={submit}>
       {kind === 'note' ? (
@@ -530,12 +620,12 @@ function PrepForm({
             </select>
           </label>
           <label className="field">
-            <span>{kind === 'pack' ? '物品' : '要做的事'}</span>
+            <span>{kind === 'app' ? '名称' : kind === 'pack' ? '物品' : '要做的事'}</span>
             <textarea value={text} onChange={(event) => setText(event.target.value)} />
           </label>
-          {kind === 'todo' ? (
+          {kind === 'todo' || kind === 'app' ? (
             <label className="field">
-              <span>补充，可以空着</span>
+              <span>{kind === 'app' ? '说明，可以空着' : '补充，可以空着'}</span>
               <input value={extra} onChange={(event) => setExtra(event.target.value)} />
             </label>
           ) : null}

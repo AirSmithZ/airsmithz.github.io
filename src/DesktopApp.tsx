@@ -252,7 +252,7 @@ export function DesktopApp() {
                   }}
                 >
                   <b>参考信息</b>
-                  <small>断点、行李、电话和天气</small>
+                  <small>断点、路上、电话和天气</small>
                 </button>
                 <button
                   type="button"
@@ -265,6 +265,18 @@ export function DesktopApp() {
                 >
                   <b>携带物品</b>
                   <small>要带的，以及不要塞进行李的</small>
+                </button>
+                <button
+                  type="button"
+                  data-testid="open-apps"
+                  onClick={() => {
+                    setMenu(false);
+                    setCollapsed(false);
+                    setSide('app');
+                  }}
+                >
+                  <b>要装的 App</b>
+                  <small>地图、翻译、公交、叫车和餐厅</small>
                 </button>
                 <button
                   type="button"
