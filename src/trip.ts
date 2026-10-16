@@ -1,13 +1,15 @@
 import rawTrip from './data/anzTrip.json';
-import type {
-  CostQuote,
-  DayPlan,
-  Doc,
-  Itinerary,
-  QuoteCurrency,
-  SaveNodeInput,
-  TripEdge,
-  TripNode,
+import {
+  transportLabel,
+  type CostQuote,
+  type DayPlan,
+  type Doc,
+  type Itinerary,
+  type QuoteCurrency,
+  type SaveNodeInput,
+  type TransportMode,
+  type TripEdge,
+  type TripNode,
 } from './types';
 
 const CURRENCIES = new Set<QuoteCurrency>(['CNY', 'AUD', 'NZD']);
@@ -311,6 +313,67 @@ export interface MapModel {
   located: MapPoint[];
 }
 
+const LEG_INK: Record<TransportMode, string> = {
+  walk: '#d6dde6',
+  subway: '#818cf8',
+  bus: '#4a9eff',
+  taxi: '#f59e0b',
+  flight: '#f472b6',
+  ferry: '#2dd4bf',
+};
+
+function legLead(edge: TripEdge): { word: string; drive: boolean } {
+  const head = (edge.label ?? '').split(/[，。]/)[0]?.trim() ?? '';
+  const drive = /开车|自驾/.test(head);
+  const named = head.match(/^(开车|自驾|团车|步行|船回|船|飞机|出租车|缆车|火车|公交\s*\d+\s*路|公交|免费接驳|SkyBus(?:\s+\S+){0,2}|Metro\s*\d+)/);
+  if (named) return { word: named[1].replace(/\s+/g, ' '), drive };
+  return { word: transportLabel(edge.transport_mode), drive };
+}
+
+/** 开车、自驾在数据里仍用出租车这一档，页面上写开车或自驾。 */
+export function edgeModeWord(edge: TripEdge): string {
+  return legLead(edge).word;
+}
+
+function legDistance(meters: number): string {
+  if (meters >= 1000) {
+    const km = meters / 1000;
+    const text = km >= 100 ? String(Math.round(km)) : km >= 10 ? km.toFixed(1) : km.toFixed(2);
+    return `${text}km`;
+  }
+  return `${Math.round(meters)}m`;
+}
+
+function legDuration(minutes: number): string {
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest ? `${hours}小时${rest}分` : `${hours}小时`;
+  }
+  return `${minutes}分`;
+}
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const radius = 6371000;
+  const p1 = (lat1 * Math.PI) / 180;
+  const p2 = (lat2 * Math.PI) / 180;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dLng / 2) ** 2;
+  return 2 * radius * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** 地图连线中间的短标注：方式、直线或路网距离、已写明的用时。 */
+export function mapLegCaption(edge: TripEdge): string {
+  const { word } = legLead(edge);
+  const parts = [word];
+  const meters = edge.distance_meters;
+  if (meters != null && meters > 0) parts.push(legDistance(meters));
+  const minutes = edge.duration_minutes;
+  if (minutes != null && minutes > 0) parts.push(legDuration(minutes));
+  return parts.join(' · ');
+}
+
 function jitter(nodes: TripNode[]): Map<string, { lng: number; lat: number }> {
   const groups = new Map<string, TripNode[]>();
   for (const node of nodes) {
@@ -366,6 +429,7 @@ export function buildMapModel(
       geometry: { type: 'Point', coordinates: [spot.lng, spot.lat] },
     });
   }
+  const byId = new Map(nodes.map((node) => [node.id, node]));
   const edges = days.flatMap((day) => day.edges);
   if (includeCross) {
     for (const edge of crossEdges) {
@@ -376,10 +440,29 @@ export function buildMapModel(
   for (const edge of edges) {
     const from = display.get(edge.from);
     const to = display.get(edge.to);
-    if (!from || !to || edge.from === edge.to) continue;
+    const fromNode = byId.get(edge.from);
+    const toNode = byId.get(edge.to);
+    if (!from || !to || !fromNode || !toNode || edge.from === edge.to) continue;
+    const stored = edge.distance_meters ?? 0;
+    const geometric = Math.round(haversineMeters(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng));
+    const meters = stored > 0 ? stored : geometric;
+    const captionEdge = stored > 0 ? edge : { ...edge, distance_meters: meters };
+    const lead = legLead(edge);
+    const detail = edge.label?.trim() || mapLegCaption(captionEdge);
     lineFeatures.push({
       type: 'Feature',
-      properties: { alt: edge.type === 'alternative' ? 1 : 0 },
+      properties: {
+        id: edge.id,
+        alt: edge.type === 'alternative' ? 1 : 0,
+        caption: mapLegCaption(captionEdge),
+        detail,
+        fromName: fromNode.name,
+        toName: toNode.name,
+        meters,
+        minutes: edge.duration_minutes ?? 0,
+        kind: lead.drive ? 'taxi' : edge.transport_mode,
+        ink: lead.drive ? LEG_INK.taxi : LEG_INK[edge.transport_mode],
+      },
       geometry: {
         type: 'LineString',
         coordinates: [

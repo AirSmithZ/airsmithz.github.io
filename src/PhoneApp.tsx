@@ -1,9 +1,12 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
+import { DigestBoard } from './components/DigestBoard';
 import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
 import { NodePanel } from './components/NodePanel';
+import { PrepBoard } from './components/PrepBoard';
+import type { PrepKind } from './prep';
 import type { LayoutLock, PanelId, Scope, TripEdge } from './types';
 
 const TripMap = lazy(() => import('./components/TripMap').then((mod) => ({ default: mod.TripMap })));
@@ -54,16 +57,38 @@ function PhoneDialog({
   open,
   label,
   onClose,
+  sheet = false,
   children,
 }: {
   open: boolean;
   label: string;
   onClose: () => void;
+  /** 竖屏长内容：铺满遮罩并在卡片内滚动，不压住页头。 */
+  sheet?: boolean;
   children: ReactNode;
 }) {
+  const [sheetTop, setSheetTop] = useState(12);
+  useEffect(() => {
+    if (!open || !sheet) return;
+    const measure = () => {
+      const header = document.querySelector('.shell > .header');
+      const shell = header?.closest('.shell');
+      if (!header || !shell) return;
+      const gap = header.getBoundingClientRect().bottom - shell.getBoundingClientRect().top + 8;
+      setSheetTop(Math.max(12, Math.round(gap)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [open, sheet]);
   if (!open) return null;
   return (
-    <div className="phone-layer" role="presentation" onClick={onClose}>
+    <div
+      className={`phone-layer${sheet ? ' phone-layer--sheet' : ''}`}
+      style={sheet ? { paddingTop: sheetTop } : undefined}
+      role="presentation"
+      onClick={onClose}
+    >
       <div
         className="phone-layer__panel"
         role="dialog"
@@ -90,6 +115,7 @@ export function PhoneApp() {
   const [askReset, setAskReset] = useState(false);
   const [desk, setDesk] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
+  const [side, setSide] = useState<null | 'digest' | PrepKind>(null);
 
   const wantLand = ui.layoutLock === 'landscape' || (ui.layoutLock === 'auto' && box.landscape);
   const landBlocked = wantLand && box.w < 680;
@@ -99,8 +125,8 @@ export function PhoneApp() {
   const first = doc.itinerary.days[0];
   const last = doc.itinerary.days[doc.itinerary.days.length - 1];
   const crossEdges = doc.itinerary.cross_day_edges ?? NO_EDGES;
-  const showRail = land && (ui.panel !== 'cost' || Boolean(ui.editor));
-  const modalOpen = !land && (desk || Boolean(ui.selectedId) || Boolean(ui.editor));
+  const showRail = land && (side !== null || ui.panel !== 'cost' || Boolean(ui.editor));
+  const modalOpen = !land && side === null && (desk || Boolean(ui.selectedId) || Boolean(ui.editor));
 
   const mapDays = useMemo(() => {
     if (ui.scope === 'all') return doc.itinerary.days;
@@ -258,6 +284,62 @@ export function PhoneApp() {
               </p>
               <button
                 type="button"
+                data-testid="open-digest"
+                onClick={() => {
+                  setMenu(null);
+                  actions.closeDetail();
+                  setDesk(false);
+                  setSide('digest');
+                  if (land) setRailOpen(true);
+                }}
+              >
+                <b>汇总信息</b>
+                <small>21 天，每段住哪、亮点写了什么</small>
+              </button>
+              <button
+                type="button"
+                data-testid="open-todo"
+                onClick={() => {
+                  setMenu(null);
+                  actions.closeDetail();
+                  setDesk(false);
+                  setSide('todo');
+                  if (land) setRailOpen(true);
+                }}
+              >
+                <b>待办事项</b>
+                <small>护照、签证、订票、取车，可勾选</small>
+              </button>
+              <button
+                type="button"
+                data-testid="open-notes"
+                onClick={() => {
+                  setMenu(null);
+                  actions.closeDetail();
+                  setDesk(false);
+                  setSide('note');
+                  if (land) setRailOpen(true);
+                }}
+              >
+                <b>参考信息</b>
+                <small>两国入境放在最上面，其余按章查阅</small>
+              </button>
+              <button
+                type="button"
+                data-testid="open-pack"
+                onClick={() => {
+                  setMenu(null);
+                  actions.closeDetail();
+                  setDesk(false);
+                  setSide('pack');
+                  if (land) setRailOpen(true);
+                }}
+              >
+                <b>携带物品</b>
+                <small>要带的，以及不要塞进行李的</small>
+              </button>
+              <button
+                type="button"
                 className="danger-item"
                 onClick={() => {
                   setMenu(null);
@@ -287,7 +369,13 @@ export function PhoneApp() {
               {railOpen ? '收起' : '详情'}
             </button>
             <div className="rail-scroll" hidden={!railOpen}>
-              {nodePanel}
+              {side === 'digest' ? (
+                <DigestBoard mode="land" onClose={() => setSide(null)} />
+              ) : side ? (
+                <PrepBoard kind={side} mode="land" onClose={() => setSide(null)} />
+              ) : (
+                nodePanel
+              )}
             </div>
           </aside>
         ) : null}
@@ -320,6 +408,7 @@ export function PhoneApp() {
                 crossEdges={crossEdges}
                 selectedId={ui.selectedId}
                 onSelect={(id) => {
+                  setSide(null);
                   actions.selectNode(id);
                   if (!land) setDesk(true);
                 }}
@@ -335,6 +424,7 @@ export function PhoneApp() {
                   includeCross={ui.scope === 'all'}
                   selectedId={ui.selectedId}
                   onSelect={(id) => {
+                    setSide(null);
                     actions.selectNode(id);
                     if (!land) setDesk(true);
                   }}
@@ -349,6 +439,21 @@ export function PhoneApp() {
       </div>
 
       {menu ? <button type="button" className="menu-dismiss" aria-label="关闭菜单" onClick={() => setMenu(null)} /> : null}
+
+      <PhoneDialog sheet open={!land && side === 'digest'} label="行程汇总" onClose={() => setSide(null)}>
+        <DigestBoard mode="port" onClose={() => setSide(null)} />
+      </PhoneDialog>
+
+      <PhoneDialog
+        sheet
+        open={!land && (side === 'todo' || side === 'note' || side === 'pack')}
+        label={side === 'todo' ? '待办事项' : side === 'note' ? '参考信息' : '携带物品'}
+        onClose={() => setSide(null)}
+      >
+        {side === 'todo' || side === 'note' || side === 'pack' ? (
+          <PrepBoard kind={side} mode="port" onClose={() => setSide(null)} />
+        ) : null}
+      </PhoneDialog>
 
       <PhoneDialog open={modalOpen} label="节点详情" onClose={hideModal}>
         <div className="detail-modal">

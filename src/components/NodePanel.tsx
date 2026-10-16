@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { CostQuote, Doc, EditorSession, NodeCategory, TransportMode, TripEdge, TripNode } from '../types';
-import { CATEGORIES, TRANSPORTS, categoryMeta, transportLabel } from '../types';
+import { CATEGORIES, TRANSPORTS, categoryMeta } from '../types';
 import { formatMoney } from '../money';
-import { blankNode, incomingEdge, previousInDay, uid } from '../trip';
+import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
 import { actions } from '../store';
 
 interface FormState {
@@ -455,7 +455,7 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
           )}
           {viewingEdge ? (
             <p className="detail-line">
-              上一程 {transportLabel(viewingEdge.transport_mode)}
+              上一程 {edgeModeWord(viewingEdge)}
               {viewingEdge.duration_minutes ? ` · ${viewingEdge.duration_minutes} 分钟` : ''}
               {viewingEdge.label ? ` · ${viewingEdge.label}` : ''}
             </p>

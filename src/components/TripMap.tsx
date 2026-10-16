@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import maplibregl, { type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import maplibregl, { type FilterSpecification, type GeoJSONSource, type Map as MapLibreMap, type MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { DayPlan, TripEdge } from '../types';
 import { categoryMeta } from '../types';
@@ -33,6 +33,40 @@ function ToolIcon({ name }: { name: 'locate' | 'in' | 'out' | 'fit' | 'fold' | '
 }
 
 const LABEL_FONT = ['Noto Sans Regular'];
+
+const LINE_LABEL_FILTER: FilterSpecification = [
+  'any',
+  ['>=', ['get', 'meters'], 30000],
+  ['all', ['>=', ['zoom'], 7], ['>=', ['get', 'meters'], 5000]],
+  ['all', ['>=', ['zoom'], 11], ['>=', ['get', 'meters'], 250]],
+  ['>=', ['zoom'], 14],
+];
+
+interface MapLeg {
+  id: string;
+  source: 'lines-main' | 'lines-alt';
+  fromName: string;
+  toName: string;
+  caption: string;
+  detail: string;
+  ink: string;
+}
+
+function readLeg(feature: MapGeoJSONFeature): MapLeg | null {
+  const props = feature.properties;
+  if (!props || typeof props.id !== 'string') return null;
+  const caption = typeof props.caption === 'string' ? props.caption : '';
+  const detail = typeof props.detail === 'string' ? props.detail : caption;
+  return {
+    id: props.id,
+    source: feature.source === 'lines-alt' ? 'lines-alt' : 'lines-main',
+    fromName: typeof props.fromName === 'string' ? props.fromName : '',
+    toName: typeof props.toName === 'string' ? props.toName : '',
+    caption,
+    detail,
+    ink: typeof props.ink === 'string' ? props.ink : '#4a9eff',
+  };
+}
 
 const RASTER_STYLE = {
   version: 8 as const,
@@ -78,9 +112,13 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
   const [locNote, setLocNote] = useState('');
   const [fix, setFix] = useState<Fix | null>(null);
   const [toolsOpen, setToolsOpen] = useState(true);
+  const [leg, setLeg] = useState<MapLeg | null>(null);
+  const onLegRef = useRef<(next: MapLeg | null) => void>(() => {});
+  const legShown = useRef<MapLeg | null>(null);
   const secure = typeof window !== 'undefined' && window.isSecureContext;
 
   onSelectRef.current = onSelect;
+  onLegRef.current = setLeg;
 
   const model = useMemo(
     () => buildMapModel(days, crossEdges, includeCross, selectedId, (category) => categoryMeta(category).color),
@@ -116,13 +154,17 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
 
     const mountLayers = () => {
       if (dead || map.getSource('nodes')) return;
-      map.addSource('lines-main', { type: 'geojson', data: emptyCollection() });
-      map.addSource('lines-alt', { type: 'geojson', data: emptyCollection() });
+      map.addSource('lines-main', { type: 'geojson', data: emptyCollection(), promoteId: 'id' });
+      map.addSource('lines-alt', { type: 'geojson', data: emptyCollection(), promoteId: 'id' });
       map.addLayer({
         id: 'lines-main',
         type: 'line',
         source: 'lines-main',
-        paint: { 'line-color': '#4a9eff', 'line-width': 2.5, 'line-opacity': 0.9 },
+        paint: {
+          'line-color': ['coalesce', ['get', 'ink'], '#4a9eff'],
+          'line-width': ['case', ['boolean', ['feature-state', 'on'], false], 4.5, 2.4],
+          'line-opacity': 0.92,
+        },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
       map.addLayer({
@@ -131,10 +173,22 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
         source: 'lines-alt',
         paint: {
           'line-color': '#8b9cb0',
-          'line-width': 2,
+          'line-width': ['case', ['boolean', ['feature-state', 'on'], false], 4, 2],
           'line-dasharray': [1.4, 1.2],
           'line-opacity': 0.85,
         },
+      });
+      map.addLayer({
+        id: 'lines-hit-main',
+        type: 'line',
+        source: 'lines-main',
+        paint: { 'line-color': '#000', 'line-width': 16, 'line-opacity': 0.01 },
+      });
+      map.addLayer({
+        id: 'lines-hit-alt',
+        type: 'line',
+        source: 'lines-alt',
+        paint: { 'line-color': '#000', 'line-width': 16, 'line-opacity': 0.01 },
       });
       map.addSource('user-acc', { type: 'geojson', data: emptyCollection() });
       map.addLayer({
@@ -183,14 +237,60 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
           'text-halo-width': 1.2,
         },
       });
-      map.on('click', 'nodes', (event) => {
-        const id = event.features?.[0]?.properties?.id;
-        if (typeof id === 'string') onSelectRef.current(id);
+      const addLineLabel = (id: string, source: string) => {
+        map.addLayer({
+          id,
+          type: 'symbol',
+          source,
+          filter: LINE_LABEL_FILTER,
+          layout: {
+            'symbol-placement': 'line-center',
+            'text-field': ['get', 'caption'],
+            'text-font': LABEL_FONT,
+            'text-size': ['interpolate', ['linear'], ['zoom'], 3, 11, 8, 12, 13, 13],
+            'text-keep-upright': true,
+            'text-max-angle': 28,
+            'text-padding': 6,
+            'text-allow-overlap': false,
+            'text-optional': true,
+          },
+          paint: {
+            'text-color': ['coalesce', ['get', 'ink'], '#e8edf4'],
+            'text-halo-color': 'rgba(7, 11, 16, 0.92)',
+            'text-halo-width': 1.5,
+          },
+        });
+      };
+      addLineLabel('line-labels-main', 'lines-main');
+      addLineLabel('line-labels-alt', 'lines-alt');
+      const nodeLayers = ['nodes', 'node-labels'].filter((id) => map.getLayer(id));
+      const lineLayers = [
+        'line-labels-main',
+        'line-labels-alt',
+        'lines-hit-main',
+        'lines-hit-alt',
+        'lines-main',
+        'lines-alt',
+      ].filter((id) => map.getLayer(id));
+      map.on('click', (event) => {
+        const nodeHit = map.queryRenderedFeatures(event.point, { layers: nodeLayers });
+        if (nodeHit.length > 0) {
+          const id = nodeHit[0].properties?.id;
+          if (typeof id === 'string') onSelectRef.current(id);
+          onLegRef.current(null);
+          return;
+        }
+        const lineHit = map.queryRenderedFeatures(event.point, { layers: lineLayers });
+        onLegRef.current(lineHit[0] ? readLeg(lineHit[0]) : null);
       });
-      map.on('click', 'node-labels', (event) => {
-        const id = event.features?.[0]?.properties?.id;
-        if (typeof id === 'string') onSelectRef.current(id);
-      });
+      for (const id of [...nodeLayers, ...lineLayers]) {
+        map.on('mouseenter', id, () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', id, () => {
+          map.getCanvas().style.cursor = '';
+        });
+      }
       map.resize();
       setStyleError(false);
       setReady(true);
@@ -259,6 +359,19 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
     mainSource.setData({ type: 'FeatureCollection', features: main });
     altSource.setData({ type: 'FeatureCollection', features: alt });
   }, [model, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const previous = legShown.current;
+    if (previous && map.getSource(previous.source)) {
+      map.setFeatureState({ source: previous.source, id: previous.id }, { on: false });
+    }
+    if (leg && map.getSource(leg.source)) {
+      map.setFeatureState({ source: leg.source, id: leg.id }, { on: true });
+    }
+    legShown.current = leg;
+  }, [leg, ready, model]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -378,6 +491,25 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
         <p className="map-tag" aria-hidden>
           {selected.name}
         </p>
+      ) : null}
+      {leg ? (
+        <article className="map-leg" style={{ '--leg-ink': leg.ink } as CSSProperties} aria-live="polite">
+          <div className="map-leg__top">
+            <p className="map-leg__kicker">这一段</p>
+            <button type="button" className="map-leg__close" onClick={() => setLeg(null)}>
+              关闭
+            </button>
+          </div>
+          <p className="map-leg__route">
+            <span>{leg.fromName}</span>
+            <span className="map-leg__arrow" aria-hidden>
+              →
+            </span>
+            <span>{leg.toName}</span>
+          </p>
+          <p className="map-leg__meta">{leg.caption}</p>
+          {leg.detail && leg.detail !== leg.caption ? <p className="map-leg__note">{leg.detail}</p> : null}
+        </article>
       ) : null}
       <div className={`map-tools${toolsOpen ? '' : ' is-shut'}`}>
         <button

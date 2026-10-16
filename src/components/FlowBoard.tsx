@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from 'react';
 import type { DayPlan, TripEdge, TripNode } from '../types';
-import { categoryMeta, transportLabel } from '../types';
+import { categoryMeta } from '../types';
+import { edgeModeWord } from '../trip';
 
 interface FlowBoardProps {
   days: DayPlan[];
@@ -124,7 +125,7 @@ export function FlowBoard({
               <li key={node.id}>
                 {edge ? (
                   <p className="hop">
-                    {transportLabel(edge.transport_mode)}
+                    {edgeModeWord(edge)}
                     {edge.duration_minutes ? ` · ${edge.duration_minutes} 分钟` : ''}
                     {edge.label ? ` · ${edge.label}` : ''}
                   </p>

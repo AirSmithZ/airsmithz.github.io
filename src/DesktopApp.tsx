@@ -2,10 +2,13 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
+import { DigestBoard } from './components/DigestBoard';
 import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
 import { OverviewMatrix } from './components/OverviewMatrix';
 import { NodePanel } from './components/NodePanel';
+import { PrepBoard } from './components/PrepBoard';
+import type { PrepKind } from './prep';
 import type { PanelId, Scope, TripEdge } from './types';
 import './desktop.css';
 
@@ -94,6 +97,7 @@ export function DesktopApp() {
   const [menu, setMenu] = useState(false);
   const [spread, setSpread] = useState(false);
   const [askReset, setAskReset] = useState(false);
+  const [side, setSide] = useState<null | 'digest' | PrepKind>(null);
   const held = useRef<'graph' | 'map'>(ui.panel === 'map' ? 'map' : 'graph');
   if (ui.panel === 'graph' || ui.panel === 'map') held.current = ui.panel;
   const stage: 'graph' | 'map' = ui.panel === 'cost' ? held.current : ui.panel;
@@ -113,6 +117,7 @@ export function DesktopApp() {
   const pickNode = useCallback((id: string) => {
     actions.selectNode(id);
     setCollapsed(false);
+    setSide(null);
   }, []);
 
   function choosePanel(panel: Exclude<PanelId, 'cost'>) {
@@ -188,13 +193,51 @@ export function DesktopApp() {
                 </p>
                 <button
                   type="button"
-                  role="menuitemcheckbox"
-                  aria-checked={spread}
-                  className={spread ? 'is-on' : undefined}
-                  onClick={() => setSpread((on) => !on)}
+                  data-testid="open-digest"
+                  onClick={() => {
+                    setMenu(false);
+                    setCollapsed(false);
+                    setSide('digest');
+                  }}
                 >
-                  <b>{spread ? '收回排列' : '展开排列'}</b>
-                  <small>只改总览：通勤缝按文字加宽，加油站改成三排</small>
+                  <b>汇总信息</b>
+                  <small>21 天，每段住哪、亮点写了什么</small>
+                </button>
+                <button
+                  type="button"
+                  data-testid="open-todo"
+                  onClick={() => {
+                    setMenu(false);
+                    setCollapsed(false);
+                    setSide('todo');
+                  }}
+                >
+                  <b>待办事项</b>
+                  <small>护照、签证、订票、取车，可勾选</small>
+                </button>
+                <button
+                  type="button"
+                  data-testid="open-notes"
+                  onClick={() => {
+                    setMenu(false);
+                    setCollapsed(false);
+                    setSide('note');
+                  }}
+                >
+                  <b>参考信息</b>
+                  <small>两国入境放在最上面，其余按章查阅</small>
+                </button>
+                <button
+                  type="button"
+                  data-testid="open-pack"
+                  onClick={() => {
+                    setMenu(false);
+                    setCollapsed(false);
+                    setSide('pack');
+                  }}
+                >
+                  <b>携带物品</b>
+                  <small>要带的，以及不要塞进行李的</small>
                 </button>
                 <button
                   type="button"
@@ -221,7 +264,15 @@ export function DesktopApp() {
           aria-hidden={collapsed}
           inert={collapsed ? true : undefined}
         >
-          <div className="desk__panel-scroll">{nodePanel}</div>
+          <div className="desk__panel-scroll">
+            {side === 'digest' ? (
+              <DigestBoard mode="land" onClose={() => setSide(null)} />
+            ) : side ? (
+              <PrepBoard kind={side} mode="desk" onClose={() => setSide(null)} />
+            ) : (
+              nodePanel
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -297,6 +348,18 @@ export function DesktopApp() {
                   地图
                 </button>
               </div>
+              {ui.scope === 'all' && stage === 'graph' ? (
+                <button
+                  type="button"
+                  className={`desk-spread${spread ? ' is-on' : ''}`}
+                  aria-pressed={spread}
+                  data-testid="toggle-spread"
+                  title="通勤缝按文字加宽，加油站改成三排"
+                  onClick={() => setSpread((on) => !on)}
+                >
+                  {spread ? '收回排列' : '展开排列'}
+                </button>
+              ) : null}
             </div>
             {ui.scope === 'day' ? (
               <DayStrip

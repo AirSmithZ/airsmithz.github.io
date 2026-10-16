@@ -1,5 +1,5 @@
 import type { DayPlan, TripEdge, TripNode } from '../types';
-import { transportLabel } from '../types';
+import { edgeModeWord } from '../trip';
 
 const NODE_WIDTH = 140;
 const NODE_HEIGHT = 64;
@@ -108,7 +108,7 @@ function formatMeters(meters: number | undefined): string {
 
 /** 收起时是「方式 · 分钟」。展开时有说明就用说明，避免长标签和窄缝叠在一起。 */
 export function edgeCaption(edge: TripEdge, spread = false): string {
-  const mode = transportLabel(edge.transport_mode);
+  const mode = edgeModeWord(edge);
   const mins = edge.duration_minutes;
   const hasDuration = mins != null && mins > 0;
   if (!spread) {
