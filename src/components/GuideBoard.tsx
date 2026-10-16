@@ -29,6 +29,12 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
                   {step.hrefLabel ?? step.href}
                 </a>
               ) : null}
+              {step.figures?.map((figure) => (
+                <figure key={figure.src} className="guide-photo">
+                  <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+                  <figcaption>{figure.caption}</figcaption>
+                </figure>
+              ))}
               {step.screen ? (
                 <figure className="guide-screen">
                   <div className="guide-screen__bar">

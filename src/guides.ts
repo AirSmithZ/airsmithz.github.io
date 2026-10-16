@@ -19,12 +19,20 @@ export interface GuideScreen {
   fields: GuideField[];
 }
 
+export interface GuideFigure {
+  /** 相对站点根目录，不含开头的斜杠。 */
+  src: string;
+  alt: string;
+  caption: string;
+}
+
 export interface GuideStep {
   title: string;
   body: string;
   href?: string;
   hrefLabel?: string;
   screen?: GuideScreen;
+  figures?: GuideFigure[];
 }
 
 export interface Guide {
@@ -85,6 +93,44 @@ export const GUIDES: Guide[] = [
             { label: 'Confirm', value: '状态从 Required 变成 Received' },
           ],
         },
+      },
+      {
+        title: '按上传栏准备文件',
+        body: '按申请表里出现的栏交。下面六张图是一位申请人传过的文件，和帮助页不一致的地方写在图下。',
+        href: 'https://immi.homeaffairs.gov.au/check-twice-submit-once/visitor-visa',
+        hrefLabel: '交访客签证前再核对一遍',
+        figures: [
+          {
+            src: 'visa/6acddb93000000000b004a4b/01.webp',
+            alt: '护照资料页和身份证正反面的示例',
+            caption: '护照资料页，扫描清晰，JPG 或 PDF 都可以。下面是身份证正反面。',
+          },
+          {
+            src: 'visa/6acddb93000000000b004a4b/02.webp',
+            alt: '户口本、结婚证和家庭构成表的示例',
+            caption: '户口本从首页到全部成员页。已婚或离异再附结婚证或离婚证。图里的 54 表，笔记写成没有直系亲属户口本才交。帮助页写中国申请人户口本和表格 54 都要。',
+          },
+          {
+            src: 'visa/6acddb93000000000b004a4b/03.webp',
+            alt: '出入境记录、行程单和解释信的示例',
+            caption: '左边是出入境记录或旧签证页。右边是行程单。解释信也可以放在「在澳活动」这一栏。',
+          },
+          {
+            src: 'visa/6acddb93000000000b004a4b/04.webp',
+            alt: '银行流水、存款证明、房产证和行驶证的示例',
+            caption: '笔记把近 6 个月流水、余额大于 5 万写成要交的。帮助页的例子是近三个月流水或工资单，没有 5 万这个数。存款证明、房产、车产是笔记里的补充。',
+          },
+          {
+            src: 'visa/6acddb93000000000b004a4b/05.webp',
+            alt: '邀请函、在职证明和营业执照的示例',
+            caption: '邀请函只在探亲或访友那一栏，这趟旅游不用。在职证明用公司抬头并盖章。自雇交营业执照。',
+          },
+          {
+            src: 'visa/6acddb93000000000b004a4b/06.webp',
+            alt: '社保、个税和同行人护照、签证的示例',
+            caption: '社保和个人所得税是笔记里的补充，帮助页没有列。有同行人才传对方护照首页；对方已获批再附签证。四人各交各的。',
+          },
+        ],
       },
       {
         title: '访客签证批下来，再看新西兰',
@@ -207,7 +253,7 @@ export const GUIDES: Guide[] = [
     eyebrow: '2 月 10 日',
     title: '入境澳大利亚',
     menuNote: '在墨尔本入境，飞机上填入境卡',
-    lede: '人坐南航进墨尔本。电子申报还只在澳航的应用里试点，这趟填纸质卡。后来从布里斯班飞走，那是离境，不用再入一次境。',
+    lede: '人坐南航进墨尔本。电子申报还只在澳航的应用里试点，这趟填纸质卡。后来从布里斯班飞走，那是离境，不用再入一次境。下面的实拍是悉尼机场。入境卡和自助机是同一套。通道在左还是在右，按墨尔本现场的牌子。',
     steps: [
       {
         title: '飞机上填纸质入境卡',
@@ -219,38 +265,101 @@ export const GUIDES: Guide[] = [
           window: 'Incoming Passenger Card',
           fields: [
             { label: '地址', value: 'Absolute Collins，墨尔本' },
-            { label: '食品和动植物', value: '有就选 Yes' },
+            { label: '食品和动植物', value: '有或拿不准，选 Yes' },
+            { label: '药品', value: '常备药、维生素也选 Yes' },
             { label: '鞋和泥土', value: '乡下或淡水穿过的，选 Yes' },
             { label: '近 30 天', value: '去过农场或野外，选 Yes' },
             { label: '现金', value: '达到 1 万澳元要申报' },
           ],
         },
+        figures: [
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/02.webp',
+            alt: '客舱里空乘在发入境材料',
+            caption: '入境卡在飞机上发。这张拍的是飞悉尼的澳航客舱。南航同样发纸质卡。没发到，落地后大厅里有。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/03.webp',
+            alt: '手里的澳大利亚入境卡正面和背面',
+            caption: '正面申报物品，背面签字、选停留原因。卡上印着方框打叉，不是打勾。姓名和护照号是拍摄者的，不要抄。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/04.webp',
+            alt: '入境卡中文填写说明，方框里打叉',
+            caption: '游客选 B。电话写 +86。地址写 Absolute Collins，墨尔本 VIC，不要抄图上的悉尼。有食品、药品或拿不准，那一题选「是」。图上多数题打在「否」，是拍摄者自己没带的情况。',
+          },
+        ],
       },
       {
         title: '食品和穿过的鞋主动交出',
-        body: '新鲜水果、蔬菜、种子、肉类、乳制品不要带。蜂蜜可以进大多数州，但要申报并接受检查。进墨尔本前把鞋底和包上的土、草、粪便洗掉并晾干。主动交给检查员就不罚款。瞒报违法。',
+        body: '新鲜水果、蔬菜、种子、肉类、乳制品不要带。蜂蜜可以进大多数州，但要申报并接受检查。常备药和维生素也要申报，名称用英文写在卡上。拿不准的物品选 Yes。进墨尔本前把鞋底和包上的土、草、粪便洗掉并晾干。主动交给检查员就不罚款。瞒报违法。',
         href: 'https://www.agriculture.gov.au/biosecurity-trade/policy/faqs',
         hrefLabel: '农业部：什么必须申报',
       },
       {
         title: '先试自助闸机，过不了走人工',
-        body: '护照在有效期内、年满 7 岁、身高至少 1.1 米可以试 SmartGate。电子护照和普通护照都可以。摘掉口罩、帽子和墨镜。一次只进一个人。门不开，去协助台或人工柜台。入境卡照样要填。',
+        body: '护照在有效期内、年满 7 岁、身高至少 1.1 米可以试 SmartGate。电子护照和普通护照都可以。护照首页朝下塞进读卡器，照片朝向机器。屏幕可以选简体中文。摘掉口罩、帽子和墨镜。一次只进一个人。门不开，去协助台或人工柜台。入境卡照样要填。',
         href: 'https://www.abf.gov.au/entering-and-leaving-australia/smartgate/arrivals/how-to-use-smartgates',
         hrefLabel: 'SmartGate 官方两步说明',
         screen: {
           caption: '按边境执法局页面的两步画的。简体中文字幕短片在同一机构的资料页。',
           window: 'SmartGate',
           fields: [
-            { label: '第一步 自助机', value: '护照塞进读卡器，答完问题' },
+            { label: '第一步 自助机', value: '护照首页朝下塞进读卡器，照片朝向机器' },
+            { label: '屏幕', value: '可选简体中文，按提示作答' },
             { label: '小票', value: '打出来，和入境卡放在一起' },
             { label: '第二步 闸门', value: '看摄像头，门开了去取行李' },
             { label: '过不了', value: '去人工柜台' },
           ],
         },
+        figures: [
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/06.webp',
+            alt: '护照检查区排队使用的自助机',
+            caption: '自助机在 Passport Control 下面排队。头顶的国内转机牌子是悉尼航站楼。这趟在墨尔本进城，过完闸门去行李提取。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/07.webp',
+            alt: '护照照片页朝下插入自助机',
+            caption: '照片页朝下，按箭头插到底，问题答完再抽出来。左下角 Change language 可以选简体中文。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/08.webp',
+            alt: '自助机上结核、刑事定罪和近六天行程三题',
+            caption: '这三题按实情。图上黄字写「都选否」，是拍摄者自己的答案。有结核、有刑事定罪，或近 6 天去过非洲、南美洲、中美洲或加勒比，选「是」。这趟从中国经广州，第三题选否。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/09.webp',
+            alt: '自助机吐出小票，屏幕指向闸门',
+            caption: '答完先取护照，再取小票。小票和入境卡放在一起，按屏幕去闸门。门不开，去人工柜台。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/05.webp',
+            alt: '自助通道的小票样品和通道指示',
+            caption: '小票上有人脸，拿着往前走。红圈是拍摄者在悉尼画的。墨尔本不要按这个左右找路，认 SmartGate 和 Passport Control。',
+          },
+        ],
       },
       {
         title: '取完行李再交卡',
-        body: '把 SmartGate 小票和入境卡交给边境或生物安全官员，再出大厅。一般商品免税额：成人 900 澳元，18 岁以下 450 澳元。烟和酒另有限额。超过的写进入境卡。',
+        body: '取行李时如果检疫犬过来，按工作人员说的把行李放在地上。把 SmartGate 小票和入境卡交给边境或生物安全官员，再出大厅。一般商品免税额：成人 900 澳元，18 岁以下 450 澳元。烟和酒另有限额。超过的写进入境卡。',
+        figures: [
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/10.webp',
+            alt: '行李提取和转机的指示牌',
+            caption: '闸门开了跟 Baggage Claim，中文是行李提取。International Transfer 是转机，这趟不走。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/11.webp',
+            alt: '行李转盘上的托运行李',
+            caption: '到自己的转盘取行李。转盘边上的黄按钮是紧急停止，不要按。',
+          },
+          {
+            src: 'arrival/6ab4f076000000001a023f6d/12.webp',
+            alt: '出口旁的生物安全申报立牌',
+            caption: '出口前这块立牌写着，不申报可能取消签证。食品、肉类、水果、植物在这里最后交一次，再把小票和入境卡交给官员。',
+          },
+        ],
       },
     ],
   },
