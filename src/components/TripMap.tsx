@@ -149,7 +149,6 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
       fadeDuration: 0,
       maxPitch: 0,
     });
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
     mapRef.current = map;
 
     const mountLayers = () => {

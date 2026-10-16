@@ -1800,8 +1800,3 @@ button {
   }
 }
 
-.maplibregl-ctrl-attrib {
-  font-size: 10px !important;
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent) !important;
-  color: var(--text-dim) !important;
-}
