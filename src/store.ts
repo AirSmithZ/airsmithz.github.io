@@ -1,6 +1,16 @@
 import { useSyncExternalStore } from 'react';
 import type { CostQuote, Doc, LayoutLock, PanelId, SaveNodeInput, Scope, UiState } from './types';
-import { applyDelete, applyExtras, applySave, applyTravelers, clampDayIndex, seedDoc } from './trip';
+import {
+  applyAddDay,
+  applyDelete,
+  applyExtras,
+  applyPlaceNode,
+  applySave,
+  applySetDayRegion,
+  applyTravelers,
+  clampDayIndex,
+  seedDoc,
+} from './trip';
 
 const DOC_KEY = 'anz-mobile-doc-v1';
 const UI_KEY = 'anz-mobile-ui-v1';
@@ -176,6 +186,39 @@ export const actions = {
     };
     writeJson(UI_KEY, ui);
     emit();
+  },
+  placeNode(
+    dayIndex: number,
+    nodeId: string,
+    patch: { region?: string; overview_offset?: { x: number; y: number } | null },
+  ) {
+    if (ui.editor) return;
+    commitDoc(applyPlaceNode(doc, dayIndex, nodeId, patch));
+  },
+  addDay() {
+    if (ui.editor || doc.itinerary.days.length === 0) return -1;
+    const next = applyAddDay(doc);
+    const dayIndex = next.itinerary.days.length - 1;
+    doc = next;
+    ui = { ...ui, dayIndex, selectedId: null, scope: 'all', panel: ui.panel === 'cost' ? ui.panel : 'graph' };
+    storageOk = writeJson(DOC_KEY, doc);
+    writeJson(UI_KEY, ui);
+    emit();
+    return dayIndex;
+  },
+  addRegion(name: string, dayIndex: number) {
+    if (ui.editor) return false;
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    const taken =
+      doc.itinerary.extra_regions?.includes(trimmed) ||
+      doc.itinerary.days.some((day) => {
+        if (day.region?.trim() === trimmed) return true;
+        return day.nodes.some((node) => (node.region?.trim() || day.region?.trim() || '其他') === trimmed);
+      });
+    if (taken) return false;
+    commitDoc(applySetDayRegion(doc, dayIndex, trimmed));
+    return true;
   },
   deleteNode(nodeId: string) {
     doc = applyDelete(doc, nodeId);

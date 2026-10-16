@@ -275,6 +275,9 @@
 .desk .day-strip {
   flex: 1;
   min-width: 0;
+  /* 横向滚动会连带裁切纵向，给顶边留出空隙 */
+  padding-block: 2px;
+  margin-block: -2px;
 }
 
 .desk .day-chip {
@@ -298,10 +301,6 @@
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
   line-height: 1.2;
-}
-
-.desk .day-chip.is-on {
-  transform: translateY(-1px);
 }
 
 .desk .day-chip.is-on span {

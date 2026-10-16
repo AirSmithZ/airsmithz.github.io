@@ -146,6 +146,73 @@ export function applySave(doc: Doc, input: SaveNodeInput): Doc {
   return next;
 }
 
+export function applyPlaceNode(
+  doc: Doc,
+  dayIndex: number,
+  nodeId: string,
+  patch: { region?: string; overview_offset?: { x: number; y: number } | null },
+): Doc {
+  const next = touch(clone(doc));
+  const node = next.itinerary.days[dayIndex]?.nodes.find((item) => item.id === nodeId);
+  if (!node) return next;
+  if (patch.region?.trim()) node.region = patch.region.trim();
+  if (patch.overview_offset === null) delete node.overview_offset;
+  else if (patch.overview_offset) {
+    node.overview_offset = {
+      x: Math.round(patch.overview_offset.x),
+      y: Math.round(patch.overview_offset.y),
+    };
+  }
+  return next;
+}
+
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+function nextCalendarDay(iso: string): { date: string; weekday: string } {
+  const [year, month, day] = iso.split('-').map((part) => Number.parseInt(part, 10));
+  const stamp = new Date(Date.UTC(year, month - 1, day));
+  stamp.setUTCDate(stamp.getUTCDate() + 1);
+  const date = stamp.toISOString().slice(0, 10);
+  return { date, weekday: WEEKDAYS[stamp.getUTCDay()] ?? '周一' };
+}
+
+export function applyAddDay(doc: Doc): Doc {
+  const next = touch(clone(doc));
+  const days = next.itinerary.days;
+  const last = days[days.length - 1];
+  if (!last) return next;
+  const { date, weekday } = nextCalendarDay(last.date);
+  days.push({
+    day_index: days.length + 1,
+    date,
+    weekday,
+    label: '新的一天',
+    region: last.region,
+    nodes: [],
+    edges: [],
+  });
+  return next;
+}
+
+export function applySetDayRegion(doc: Doc, dayIndex: number, name: string): Doc {
+  const trimmed = name.trim();
+  const next = touch(clone(doc));
+  const day = next.itinerary.days[dayIndex];
+  if (!day || !trimmed) return next;
+  day.region = trimmed;
+  return next;
+}
+
+export function applyAddRegion(doc: Doc, name: string): Doc {
+  const trimmed = name.trim();
+  if (!trimmed) return doc;
+  const next = touch(clone(doc));
+  const list = next.itinerary.extra_regions ?? [];
+  if (list.includes(trimmed)) return doc;
+  next.itinerary.extra_regions = [...list, trimmed];
+  return next;
+}
+
 export function applyDelete(doc: Doc, nodeId: string): Doc {
   const next = touch(clone(doc));
   for (const day of next.itinerary.days) {

@@ -4,6 +4,7 @@ import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
 import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
+import { OverviewMatrix } from './components/OverviewMatrix';
 import { NodePanel } from './components/NodePanel';
 import type { PanelId, Scope, TripEdge } from './types';
 import './desktop.css';
@@ -91,6 +92,7 @@ export function DesktopApp() {
   const { width, startResize } = useDeskPanelWidth();
   const [collapsed, setCollapsed] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [spread, setSpread] = useState(false);
   const [askReset, setAskReset] = useState(false);
   const held = useRef<'graph' | 'map'>(ui.panel === 'map' ? 'map' : 'graph');
   if (ui.panel === 'graph' || ui.panel === 'map') held.current = ui.panel;
@@ -108,10 +110,10 @@ export function DesktopApp() {
     if (ui.editor) setCollapsed(false);
   }, [ui.editor]);
 
-  function pickNode(id: string) {
+  const pickNode = useCallback((id: string) => {
     actions.selectNode(id);
     setCollapsed(false);
-  }
+  }, []);
 
   function choosePanel(panel: Exclude<PanelId, 'cost'>) {
     setMenu(false);
@@ -184,6 +186,16 @@ export function DesktopApp() {
                     ? '还没改过。这台电脑没有存档时，用 anzTrip.json。'
                     : `存在这台电脑里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
                 </p>
+                <button
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={spread}
+                  className={spread ? 'is-on' : undefined}
+                  onClick={() => setSpread((on) => !on)}
+                >
+                  <b>{spread ? '收回排列' : '展开排列'}</b>
+                  <small>只改总览：通勤缝按文字加宽，加油站改成三排</small>
+                </button>
                 <button
                   type="button"
                   className="danger-item"
@@ -302,15 +314,38 @@ export function DesktopApp() {
           </div>
           <div className="desk__stage stage-view">
             <div className={`view view--front${stage === 'graph' ? '' : ' is-off'}`} data-testid="view-graph">
-              <FlowBoard
-                days={doc.itinerary.days}
-                scope={ui.scope}
-                dayIndex={ui.dayIndex}
-                crossEdges={crossEdges}
-                selectedId={ui.selectedId}
-                onSelect={pickNode}
-                onPickDay={(index) => actions.pickOverviewDay(index)}
-              />
+              {ui.scope === 'all' ? (
+                <OverviewMatrix
+                  days={doc.itinerary.days}
+                  crossEdges={crossEdges}
+                  extraRegions={doc.itinerary.extra_regions}
+                  selectedId={ui.selectedId}
+                  dayIndex={ui.dayIndex}
+                  locked={Boolean(ui.editor)}
+                  onSelect={pickNode}
+                  onPickDay={(index) => actions.pickOverviewDay(index)}
+                  onOpenMap={(id) => {
+                    pickNode(id);
+                    actions.setPanel('map');
+                  }}
+                  onAddDay={() => {
+                    actions.addDay();
+                  }}
+                  onAddRegion={(name) => actions.addRegion(name, ui.dayIndex)}
+                  spread={spread}
+                  onPlace={(index, id, patch) => actions.placeNode(index, id, patch)}
+                />
+              ) : (
+                <FlowBoard
+                  days={doc.itinerary.days}
+                  scope="day"
+                  dayIndex={ui.dayIndex}
+                  crossEdges={crossEdges}
+                  selectedId={ui.selectedId}
+                  onSelect={pickNode}
+                  onPickDay={(index) => actions.setDay(index)}
+                />
+              )}
             </div>
             <div className={`view view--map${stage === 'map' ? '' : ' is-off'}`} aria-hidden={stage !== 'map'}>
               <Suspense fallback={<p className="empty-note">地图加载中…</p>}>

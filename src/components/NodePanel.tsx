@@ -213,7 +213,11 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
               取消
             </button>
           </header>
-          <p className="fine">只改这一天里的节点。天数和日期不能动。</p>
+          <p className="fine">
+            {host === 'desk'
+              ? '只改这一天里的节点。已有日期不能改，总览末尾可以再加一天。'
+              : '只改这一天里的节点。天数和日期不能动。'}
+          </p>
           <label className="field">
             <span>名称</span>
             <input value={form.name} onChange={(event) => patch({ name: event.target.value })} autoComplete="off" required />
@@ -502,7 +506,11 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
           ) : (
             <div className="node-detail">
               <p>点流程或地图上的一站，这里显示时间、地址和费用。</p>
-              <p className="fine">天数和日期是固定的，只能增删改这一天里面的节点。</p>
+              <p className="fine">
+                {host === 'desk'
+                  ? '已有日期不能改。总览末尾可以再加一天，也可以增删改某一天里的节点。'
+                  : '天数和日期是固定的，只能增删改这一天里面的节点。'}
+              </p>
             </div>
           )}
         </>

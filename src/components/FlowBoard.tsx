@@ -20,21 +20,27 @@ function incomingOf(day: DayPlan, crossEdges: TripEdge[], nodeId: string): TripE
   );
 }
 
-function NodeCard({
+export function NodeCard({
   node,
   selected,
   compact,
+  variant,
   onSelect,
+  shouldSelect,
+  onOpenMap,
 }: {
   node: TripNode;
   selected: boolean;
   compact?: boolean;
+  variant?: 'flow' | 'compact' | 'matrix';
   onSelect: (id: string) => void;
+  shouldSelect?: () => boolean;
+  onOpenMap?: (id: string) => void;
 }) {
+  const kind = variant ?? (compact ? 'compact' : 'flow');
   const meta = categoryMeta(node.category);
-  const time = compact
-    ? node.start_time
-    : [node.start_time, node.end_time].filter(Boolean).join(' – ');
+  const time =
+    kind === 'compact' ? node.start_time : [node.start_time, node.end_time].filter(Boolean).join(' – ');
   const tone = {
     '--node-color': meta.color,
     '--node-glow': meta.glow,
@@ -42,11 +48,19 @@ function NodeCard({
   return (
     <button
       type="button"
-      className={`trip-node${compact ? ' trip-node--compact' : ' trip-node--flow'}${selected ? ' trip-node--selected' : ''}${node.is_optional ? ' trip-node--optional' : ''}`}
+      className={`trip-node${kind === 'flow' ? ' trip-node--flow' : ' trip-node--compact'}${kind === 'matrix' ? ' trip-node--matrix' : ''}${selected ? ' trip-node--selected' : ''}${node.is_optional ? ' trip-node--optional' : ''}`}
       style={tone}
       data-node-id={node.id}
       aria-pressed={selected}
-      onClick={() => onSelect(node.id)}
+      onClick={() => {
+        if (shouldSelect && !shouldSelect()) return;
+        onSelect(node.id);
+      }}
+      onDoubleClick={(event) => {
+        if (!onOpenMap) return;
+        event.preventDefault();
+        onOpenMap(node.id);
+      }}
     >
       <span className="trip-node__header">
         <span className="trip-node__icon" aria-hidden>
@@ -60,7 +74,7 @@ function NodeCard({
       </span>
       <span className="trip-node__name">{node.name}</span>
       {time ? <span className="trip-node__time">{time}</span> : null}
-      {!compact && node.cost_label ? <span className="trip-node__cost">{node.cost_label}</span> : null}
+      {kind !== 'compact' && node.cost_label ? <span className="trip-node__cost">{node.cost_label}</span> : null}
     </button>
   );
 }

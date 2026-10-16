@@ -38,6 +38,8 @@ export interface TripNode {
   cost_label?: string;
   cost_quotes?: CostQuote[];
   region?: string;
+  /** 总览里相对自动排位的微调，换区后清掉。 */
+  overview_offset?: { x: number; y: number };
   coord_confidence?: string;
   coord_source?: string;
   scene_group?: string;
@@ -82,6 +84,8 @@ export interface Itinerary {
   timezone: string;
   days: DayPlan[];
   cross_day_edges?: TripEdge[];
+  /** 总览里新建、但还没有站点的区域行。 */
+  extra_regions?: string[];
   meta: {
     generated_at?: string;
     model?: string;
