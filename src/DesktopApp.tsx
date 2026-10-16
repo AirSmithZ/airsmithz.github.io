@@ -9,7 +9,9 @@ import { FlowBoard } from './components/FlowBoard';
 import { OverviewMatrix } from './components/OverviewMatrix';
 import { NodePanel } from './components/NodePanel';
 import { PrepBoard } from './components/PrepBoard';
-import type { PrepKind } from './prep';
+import { GuideBoard } from './components/GuideBoard';
+import { isGuideId, GUIDES, type GuideId } from './guides';
+import { isPrepKind, type PrepKind } from './prep';
 import type { PanelId, Scope, TripEdge } from './types';
 import './desktop.css';
 
@@ -107,7 +109,7 @@ export function DesktopApp() {
   const [menu, setMenu] = useState(false);
   const [spread, setSpread] = useState(false);
   const [askReset, setAskReset] = useState(false);
-  const [side, setSide] = useState<null | 'digest' | PrepKind>(null);
+  const [side, setSide] = useState<null | 'digest' | PrepKind | GuideId>(null);
   const held = useRef<'graph' | 'map'>(ui.panel === 'map' ? 'map' : 'graph');
   if (ui.panel === 'graph' || ui.panel === 'map') held.current = ui.panel;
   const stage: 'graph' | 'map' = ui.panel === 'cost' ? held.current : ui.panel;
@@ -198,7 +200,7 @@ export function DesktopApp() {
               <div className="menu" role="menu">
                 <p className="menu-note">
                   {doc.origin === 'seed'
-                    ? '还没改过。这台电脑没有存档时，用 anzTrip.json。'
+                    ? '还没改过。这台电脑没有存档时，用初始信息。'
                     : `存在这台电脑里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
                 </p>
                 <button
@@ -225,6 +227,21 @@ export function DesktopApp() {
                   <b>待办事项</b>
                   <small>护照、签证、订票、取车，可勾选</small>
                 </button>
+                {GUIDES.map((guide) => (
+                  <button
+                    key={guide.id}
+                    type="button"
+                    data-testid={`open-guide-${guide.id}`}
+                    onClick={() => {
+                      setMenu(false);
+                      setCollapsed(false);
+                      setSide(guide.id);
+                    }}
+                  >
+                    <b>{guide.title}</b>
+                    <small>{guide.menuNote}</small>
+                  </button>
+                ))}
                 <button
                   type="button"
                   data-testid="open-notes"
@@ -235,7 +252,7 @@ export function DesktopApp() {
                   }}
                 >
                   <b>参考信息</b>
-                  <small>两国入境放在最上面，其余按章查阅</small>
+                  <small>断点、行李、电话和天气</small>
                 </button>
                 <button
                   type="button"
@@ -277,7 +294,9 @@ export function DesktopApp() {
           <div className="desk__panel-scroll">
             {side === 'digest' ? (
               <DigestBoard mode="land" onClose={() => setSide(null)} />
-            ) : side ? (
+            ) : isGuideId(side) ? (
+              <GuideBoard id={side} mode="desk" onClose={() => setSide(null)} />
+            ) : isPrepKind(side) ? (
               <PrepBoard kind={side} mode="desk" onClose={() => setSide(null)} />
             ) : (
               nodePanel

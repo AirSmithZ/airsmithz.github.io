@@ -1,4 +1,5 @@
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { Check } from './Check';
 import {
   NOTE_CHAPTERS,
   PACK_GROUPS,
@@ -64,36 +65,24 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
         <button type="button" className="btn btn-primary prep__add" data-testid="prep-add" onClick={() => setAdding((open) => !open)}>
           {adding ? '收起' : '新增'}
         </button>
-        <button type="button" className="btn btn-danger" data-testid="prep-reset" onClick={() => setAskReset(true)}>
-          重置当前数据
-        </button>
       </div>
 
-      {askReset ? (
-        <div className="prep__confirm" role="alertdialog" aria-label="重置当前数据">
-          <p>这一栏在这台设备上的增删改会丢掉，换回初始条目。行程图不受影响。</p>
-          <div className="btn-row">
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => {
-                if (kind === 'todo') prepActions.resetTodos();
-                else if (kind === 'note') prepActions.resetNotes();
-                else prepActions.resetPacks();
-                setAskReset(false);
-                setAdding(false);
-                setEditing(null);
-                setChapter('全部');
-                setQuery('');
-              }}
-            >
-              重置
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setAskReset(false)}>
-              留下
-            </button>
-          </div>
-        </div>
+      {kind === 'todo' ? (
+        <p className="prep__count">
+          <b>
+            {data.todos.filter((item) => item.done).length}/{data.todos.length}
+          </b>
+          已勾
+        </p>
+      ) : null}
+      {kind === 'pack' ? (
+        <p className="prep__count">
+          <b>
+            {data.packs.filter((item) => item.group !== '不带' && item.packed).length}/
+            {data.packs.filter((item) => item.group !== '不带').length}
+          </b>
+          已放入
+        </p>
       ) : null}
 
       {adding ? (
@@ -131,6 +120,39 @@ export function PrepBoard({ kind, mode, onClose }: PrepBoardProps) {
         />
       ) : null}
       {kind === 'pack' ? <PackList items={data.packs} needleHit={hit} editing={editing} onEdit={setEditing} /> : null}
+
+      <footer className="prep__foot">
+        {askReset ? (
+          <div className="prep__confirm" role="alertdialog" aria-label="恢复初始条目">
+            <p>这一栏在这台设备上的增删改会丢掉，换回初始条目。行程图不受影响。</p>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  if (kind === 'todo') prepActions.resetTodos();
+                  else if (kind === 'note') prepActions.resetNotes();
+                  else prepActions.resetPacks();
+                  setAskReset(false);
+                  setAdding(false);
+                  setEditing(null);
+                  setChapter('全部');
+                  setQuery('');
+                }}
+              >
+                恢复
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => setAskReset(false)}>
+                留下
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" className="text-btn prep__reset" data-testid="prep-reset" onClick={() => setAskReset(true)}>
+            恢复初始条目
+          </button>
+        )}
+      </footer>
     </section>
   );
 }
@@ -151,13 +173,9 @@ function TodoList({
     visible.map((item) => item.group),
     TODO_GROUPS,
   );
-  const done = items.filter((item) => item.done).length;
   return (
     <>
-      <p className="prep__count">
-        {done}/{items.length} 已勾
-        {visible.length !== items.length ? ` · 筛出 ${visible.length} 条` : ''}
-      </p>
+      {visible.length !== items.length ? <p className="prep__filter">筛出 {visible.length} 条</p> : null}
       {groups.map((group) => (
         <section key={group} className="prep__group">
           <h3>{group}</h3>
@@ -179,14 +197,11 @@ function TodoList({
                     />
                   </li>
                 ) : (
-                  <li key={item.id} className={item.done ? 'is-done' : undefined}>
-                    <label className="prep__check">
-                      <input type="checkbox" checked={item.done} onChange={() => prepActions.toggleTodo(item.id)} />
-                      <span>
-                        <b>{item.text}</b>
-                        {item.note ? <small>{item.note}</small> : null}
-                      </span>
-                    </label>
+                  <li key={item.id} className={item.done ? 'prep__item is-done' : 'prep__item'}>
+                    <Check className="prep__check" checked={item.done} onChange={() => prepActions.toggleTodo(item.id)}>
+                      <b>{item.text}</b>
+                      {item.note ? <small>{item.note}</small> : null}
+                    </Check>
                     <RowActions onEdit={() => onEdit(item.id)} onRemove={() => prepActions.removeTodo(item.id)} />
                   </li>
                 ),
@@ -267,7 +282,7 @@ function NoteList({
       ) : null}
       {rest.length > 0 ? (
         <div className="prep__group">
-          <h3>{chapter === '全部' ? '其余' : chapter}</h3>
+          {chapter === '全部' && gates.length > 0 ? <h3>其余</h3> : chapter !== '全部' ? <h3>{chapter}</h3> : null}
           <ul>
             {rest.map((item) => (
               <NoteCard
@@ -371,14 +386,9 @@ function PackList({
     visible.map((item) => item.group),
     PACK_GROUPS,
   );
-  const bring = items.filter((item) => item.group !== '不带');
-  const packed = bring.filter((item) => item.packed).length;
   return (
     <>
-      <p className="prep__count">
-        {packed}/{bring.length} 已放入
-        {visible.length !== items.length ? ` · 筛出 ${visible.length} 条` : ''}
-      </p>
+      {visible.length !== items.length ? <p className="prep__filter">筛出 {visible.length} 条</p> : null}
       {groups.map((group) => (
         <section key={group} className={`prep__group${group === '不带' ? ' is-ban' : ''}`}>
           <h3>{group === '不带' ? '不要塞进行李' : group}</h3>
@@ -400,18 +410,15 @@ function PackList({
                     />
                   </li>
                 ) : (
-                  <li key={item.id} className={item.packed ? 'is-done' : undefined}>
+                  <li key={item.id} className={item.packed ? 'prep__item is-done' : 'prep__item'}>
                     {item.group === '不带' ? (
                       <p className="prep__ban">
                         <b>{item.text}</b>
                       </p>
                     ) : (
-                      <label className="prep__check">
-                        <input type="checkbox" checked={item.packed} onChange={() => prepActions.togglePack(item.id)} />
-                        <span>
-                          <b>{item.text}</b>
-                        </span>
-                      </label>
+                      <Check className="prep__check" checked={item.packed} onChange={() => prepActions.togglePack(item.id)}>
+                        <b>{item.text}</b>
+                      </Check>
                     )}
                     <RowActions onEdit={() => onEdit(item.id)} onRemove={() => prepActions.removePack(item.id)} />
                   </li>
@@ -463,9 +470,8 @@ function PrepForm({
   const [chapter, setChapter] = useState(note?.chapter ?? NOTE_CHAPTERS[0]);
   const [title, setTitle] = useState(note?.title ?? '');
   const [body, setBody] = useState(note?.body ?? '');
-  const [strict, setStrict] = useState(note?.strict ?? false);
+  const strict = note?.strict ?? false;
   const [error, setError] = useState('');
-  const listId = useId();
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -492,12 +498,14 @@ function PrepForm({
         <>
           <label className="field">
             <span>章节</span>
-            <input list={listId} value={chapter} onChange={(event) => setChapter(event.target.value)} />
-            <datalist id={listId}>
+            <select value={chapter} onChange={(event) => setChapter(event.target.value)}>
               {NOTE_CHAPTERS.map((name) => (
-                <option key={name} value={name} />
+                <option key={name} value={name}>
+                  {name}
+                </option>
               ))}
-            </datalist>
+              {NOTE_CHAPTERS.some((name) => name === chapter) ? null : <option value={chapter}>{chapter}</option>}
+            </select>
           </label>
           <label className="field">
             <span>标题</span>
@@ -507,21 +515,19 @@ function PrepForm({
             <span>正文</span>
             <textarea value={body} onChange={(event) => setBody(event.target.value)} />
           </label>
-          <label className="field field--check">
-            <input type="checkbox" checked={strict} onChange={(event) => setStrict(event.target.checked)} />
-            <span>算入境严格要求，放在最上面</span>
-          </label>
         </>
       ) : (
         <>
           <label className="field">
             <span>分组</span>
-            <input list={listId} value={group} onChange={(event) => setGroup(event.target.value)} />
-            <datalist id={listId}>
+            <select value={group} onChange={(event) => setGroup(event.target.value)}>
               {groupOptions.map((name) => (
-                <option key={name} value={name} />
+                <option key={name} value={name}>
+                  {name}
+                </option>
               ))}
-            </datalist>
+              {groupOptions.some((name) => name === group) ? null : <option value={group}>{group}</option>}
+            </select>
           </label>
           <label className="field">
             <span>{kind === 'pack' ? '物品' : '要做的事'}</span>

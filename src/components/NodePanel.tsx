@@ -4,6 +4,7 @@ import { CATEGORIES, TRANSPORTS, categoryMeta } from '../types';
 import { formatMoney } from '../money';
 import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
 import { actions } from '../store';
+import { Check } from './Check';
 
 interface FormState {
   name: string;
@@ -236,14 +237,9 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
                 ))}
               </select>
             </label>
-            <label className="field field--check">
-              <input
-                type="checkbox"
-                checked={form.optional}
-                onChange={(event) => patch({ optional: event.target.checked })}
-              />
-              <span>可选，不去也行</span>
-            </label>
+            <Check className="field field--check" checked={form.optional} onChange={(optional) => patch({ optional })}>
+              可选，不去也行
+            </Check>
           </div>
           <div className="row2">
             <label className="field">
@@ -313,14 +309,13 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
                       <option value="NZD">纽元</option>
                     </select>
                   </label>
-                  <label className="field field--check">
-                    <input
-                      type="checkbox"
-                      checked={quote.in_total}
-                      onChange={(event) => patchQuote(index, { in_total: event.target.checked })}
-                    />
-                    <span>计入合计</span>
-                  </label>
+                  <Check
+                    className="field field--check"
+                    checked={quote.in_total}
+                    onChange={(inTotal) => patchQuote(index, { in_total: inTotal })}
+                  >
+                    计入合计
+                  </Check>
                 </div>
                 <div className="row2">
                   <label className="field">
@@ -365,14 +360,9 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
             {form.edgeId ? (
               <p className="fine">改的是已经连到这一站的那条线。</p>
             ) : prevName ? (
-              <label className="field field--check">
-                <input
-                  type="checkbox"
-                  checked={form.linkPrev}
-                  onChange={(event) => patch({ linkPrev: event.target.checked })}
-                />
-                <span>连到上一站：{prevName}</span>
-              </label>
+              <Check className="field field--check" checked={form.linkPrev} onChange={(linkPrev) => patch({ linkPrev })}>
+                连到上一站：{prevName}
+              </Check>
             ) : (
               <p className="fine">这一天还没有上一站。</p>
             )}

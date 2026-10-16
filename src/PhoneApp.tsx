@@ -6,7 +6,9 @@ import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
 import { NodePanel } from './components/NodePanel';
 import { PrepBoard } from './components/PrepBoard';
-import type { PrepKind } from './prep';
+import { GuideBoard } from './components/GuideBoard';
+import { isGuideId, GUIDES, type GuideId } from './guides';
+import { isPrepKind, type PrepKind } from './prep';
 import { readViewportBox } from './compat';
 import type { LayoutLock, PanelId, Scope, TripEdge } from './types';
 
@@ -117,7 +119,7 @@ export function PhoneApp() {
   const [askReset, setAskReset] = useState(false);
   const [desk, setDesk] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
-  const [side, setSide] = useState<null | 'digest' | PrepKind>(null);
+  const [side, setSide] = useState<null | 'digest' | PrepKind | GuideId>(null);
 
   const wantLand = ui.layoutLock === 'landscape' || (ui.layoutLock === 'auto' && box.landscape);
   const landBlocked = wantLand && box.w < 680;
@@ -283,7 +285,7 @@ export function PhoneApp() {
             <div className="menu" role="menu">
               <p className="menu-note">
                 {doc.origin === 'seed'
-                  ? '还没改过。这台手机没有存档时，用 anzTrip.json。'
+                  ? '还没改过。这台手机没有存档时，用初始信息。'
                   : `存在这台手机里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
               </p>
               <button
@@ -314,6 +316,23 @@ export function PhoneApp() {
                 <b>待办事项</b>
                 <small>护照、签证、订票、取车，可勾选</small>
               </button>
+              {GUIDES.map((guide) => (
+                <button
+                  key={guide.id}
+                  type="button"
+                  data-testid={`open-guide-${guide.id}`}
+                  onClick={() => {
+                    setMenu(null);
+                    actions.closeDetail();
+                    setDesk(false);
+                    setSide(guide.id);
+                    if (land) setRailOpen(true);
+                  }}
+                >
+                  <b>{guide.title}</b>
+                  <small>{guide.menuNote}</small>
+                </button>
+              ))}
               <button
                 type="button"
                 data-testid="open-notes"
@@ -326,7 +345,7 @@ export function PhoneApp() {
                 }}
               >
                 <b>参考信息</b>
-                <small>两国入境放在最上面，其余按章查阅</small>
+                <small>断点、行李、电话和天气</small>
               </button>
               <button
                 type="button"
@@ -375,7 +394,9 @@ export function PhoneApp() {
             <div className="rail-scroll" hidden={!railOpen}>
               {side === 'digest' ? (
                 <DigestBoard mode="land" onClose={() => setSide(null)} />
-              ) : side ? (
+              ) : isGuideId(side) ? (
+                <GuideBoard id={side} mode="land" onClose={() => setSide(null)} />
+              ) : isPrepKind(side) ? (
                 <PrepBoard kind={side} mode="land" onClose={() => setSide(null)} />
               ) : (
                 nodePanel
@@ -450,13 +471,15 @@ export function PhoneApp() {
 
       <PhoneDialog
         sheet
-        open={!land && (side === 'todo' || side === 'note' || side === 'pack')}
+        open={!land && isPrepKind(side)}
         label={side === 'todo' ? '待办事项' : side === 'note' ? '参考信息' : '携带物品'}
         onClose={() => setSide(null)}
       >
-        {side === 'todo' || side === 'note' || side === 'pack' ? (
-          <PrepBoard kind={side} mode="port" onClose={() => setSide(null)} />
-        ) : null}
+        {isPrepKind(side) ? <PrepBoard kind={side} mode="port" onClose={() => setSide(null)} /> : null}
+      </PhoneDialog>
+
+      <PhoneDialog sheet open={!land && isGuideId(side)} label={isGuideId(side) ? GUIDES.find((item) => item.id === side)?.title ?? '流程' : '流程'} onClose={() => setSide(null)}>
+        {isGuideId(side) ? <GuideBoard id={side} mode="port" onClose={() => setSide(null)} /> : null}
       </PhoneDialog>
 
       <PhoneDialog open={modalOpen} label="节点详情" onClose={hideModal}>
