@@ -264,18 +264,45 @@ button {
   box-shadow: var(--shadow);
 }
 
+/* 竖屏第二行「布局」右边还有「更多」。菜单若贴着按钮右缘、再取 88vw，
+   左缘会冲出屏幕，被 .shell 的 overflow:hidden 裁掉。改挂到整条 header 上。 */
+.is-port .menu-wrap { position: static; }
+
+.is-port .menu {
+  right: 12px;
+  left: auto;
+  width: min(320px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
+  /* 标题栏下面剩多少，菜单就最多多高，避免窄屏从底部冲出屏幕。 */
+  max-height: calc(
+    var(--app-h, 100dvh)
+    - var(--header-h, 140px)
+    - env(safe-area-inset-top, 0px)
+    - env(safe-area-inset-bottom, 0px)
+    - 18px
+  );
+}
+
 .menu button {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 8px 10px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   text-align: left;
+}
+
+.menu button b,
+.menu button small,
+.menu-note {
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 .menu button.is-on { background: var(--accent-soft); }

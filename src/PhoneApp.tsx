@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
 import { DigestBoard } from './components/DigestBoard';
@@ -120,6 +120,22 @@ export function PhoneApp() {
   const [desk, setDesk] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
   const [side, setSide] = useState<null | 'digest' | PrepKind | GuideId>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const apply = () => {
+      document.documentElement.style.setProperty('--header-h', `${header.offsetHeight}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(header);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--header-h');
+    };
+  }, []);
 
   const wantLand = ui.layoutLock === 'landscape' || (ui.layoutLock === 'auto' && box.landscape);
   const landBlocked = wantLand && box.w < 680;
@@ -172,7 +188,7 @@ export function PhoneApp() {
     <div
       className={`shell${land ? ' is-land' : ' is-port'}${short ? ' is-short' : ''}`}
     >
-      <header className="header">
+      <header className="header" ref={headerRef}>
         <div className="header-scroll">
         <div className="brand">
           <p className="eyebrow">ANZ</p>
