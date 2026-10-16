@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { capturePointer, mixColor, wheelPixels } from '../compat';
 import type { DayPlan, TripEdge, TripNode } from '../types';
 import { useMatrixDrag } from '../overview/drag';
 import {
@@ -226,11 +227,20 @@ export function OverviewMatrix({
   const applyScrollChrome = useCallback(() => {
     const body = bodyRef.current;
     if (!body) return;
+    const x = Math.round(body.scrollLeft);
+    const y = Math.round(body.scrollTop);
     if (headerTrackRef.current) {
-      headerTrackRef.current.style.transform = `translate3d(${-body.scrollLeft}px, 0, 0)`;
+      headerTrackRef.current.style.transform = x ? `translate3d(${-x}px, 0, 0)` : '';
     }
     if (railTrackRef.current) {
-      railTrackRef.current.style.transform = `translate3d(0, ${-body.scrollTop}px, 0)`;
+      railTrackRef.current.style.transform = y ? `translate3d(0, ${-y}px, 0)` : '';
+    }
+    const frame = body.closest<HTMLElement>('.ov');
+    if (frame) {
+      const barY = `${body.offsetWidth - body.clientWidth}px`;
+      const barX = `${body.offsetHeight - body.clientHeight}px`;
+      if (frame.style.getPropertyValue('--ov-bar-y') !== barY) frame.style.setProperty('--ov-bar-y', barY);
+      if (frame.style.getPropertyValue('--ov-bar-x') !== barX) frame.style.setProperty('--ov-bar-x', barX);
     }
   }, []);
 
@@ -262,10 +272,10 @@ export function OverviewMatrix({
       pendingReveal = false;
     };
     const onWheel = (event: globalThis.WheelEvent) => {
-      const deltaX = event.shiftKey ? event.deltaY : event.deltaX;
-      const deltaY = event.shiftKey ? 0 : event.deltaY;
-      if (Math.abs(deltaX) > Math.abs(deltaY)) body.scrollLeft += deltaX;
-      else body.scrollTop += deltaY;
+      const delta = wheelPixels(event);
+      if (delta.x === 0 && delta.y === 0) return;
+      if (Math.abs(delta.x) > Math.abs(delta.y)) body.scrollLeft += delta.x;
+      else body.scrollTop += delta.y;
       event.preventDefault();
     };
     tryReveal();
@@ -328,6 +338,7 @@ export function OverviewMatrix({
     if (locked || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    capturePointer(event.currentTarget, event.pointerId);
     resizeRef.current = {
       dayIndex: index,
       startX: event.clientX,
@@ -416,7 +427,7 @@ export function OverviewMatrix({
               style={{
                 top: layout.regionTops.get(region) ?? 0,
                 height: layout.regionHeights.get(region) ?? 0,
-                background: `color-mix(in srgb, ${TINTS[index % TINTS.length]} 100%, transparent)`,
+                background: mixColor(TINTS[index % TINTS.length] ?? '', 100, 'transparent'),
               }}
               title={region}
             >
@@ -451,7 +462,7 @@ export function OverviewMatrix({
                     top: layout.regionTops.get(region) ?? 0,
                     width: layout.columnWidths[index],
                     height: layout.regionHeights.get(region) ?? 0,
-                    background: `color-mix(in srgb, ${TINTS[regionIndex % TINTS.length]} 10%, var(--bg-base))`,
+                    background: mixColor(TINTS[regionIndex % TINTS.length] ?? '', 10, 'var(--bg-base)'),
                   }}
                 />
               )),

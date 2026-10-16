@@ -7,6 +7,7 @@ import { FlowBoard } from './components/FlowBoard';
 import { NodePanel } from './components/NodePanel';
 import { PrepBoard } from './components/PrepBoard';
 import type { PrepKind } from './prep';
+import { readViewportBox } from './compat';
 import type { LayoutLock, PanelId, Scope, TripEdge } from './types';
 
 const TripMap = lazy(() => import('./components/TripMap').then((mod) => ({ default: mod.TripMap })));
@@ -22,10 +23,11 @@ interface DeviceBox {
 
 function readBox(): DeviceBox {
   const viewport = window.visualViewport;
+  const box = readViewportBox();
   return {
     w: Math.round(viewport?.width ?? window.innerWidth),
-    h: Math.round(window.innerHeight),
-    offsetTop: 0,
+    h: box.height,
+    offsetTop: box.offsetTop,
     landscape: window.matchMedia('(orientation: landscape)').matches,
   };
 }
@@ -169,6 +171,7 @@ export function PhoneApp() {
       className={`shell${land ? ' is-land' : ' is-port'}${short ? ' is-short' : ''}`}
     >
       <header className="header">
+        <div className="header-scroll">
         <div className="brand">
           <p className="eyebrow">ANZ</p>
           <h1>澳新行程</h1>
@@ -235,6 +238,7 @@ export function PhoneApp() {
             {modalOpen ? '隐藏' : '节点'}
           </button>
         ) : null}
+        </div>
         <div className="menu-wrap">
           <button
             type="button"

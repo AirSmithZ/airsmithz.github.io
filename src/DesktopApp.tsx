@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { capturePointer } from './compat';
 import { createPortal } from 'react-dom';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
@@ -51,18 +52,26 @@ function useDeskPanelWidth() {
   }, []);
 
   const startResize = useCallback(
-    (clientX: number) => {
-      const startX = clientX;
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      const handle = event.currentTarget;
+      const pointerId = event.pointerId;
+      capturePointer(handle, pointerId);
+      const startX = event.clientX;
       const startW = width;
-      const onMove = (event: MouseEvent) => {
-        setWidth(clampPanelWidth(startW + (event.clientX - startX)));
+      const onMove = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerId) return;
+        setWidth(clampPanelWidth(startW + (ev.clientX - startX)));
       };
-      const onUp = (event: MouseEvent) => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
+      const onUp = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerId) return;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
-        const finalWidth = clampPanelWidth(startW + (event.clientX - startX));
+        const finalWidth = clampPanelWidth(startW + (ev.clientX - startX));
         setWidth(finalWidth);
         try {
           localStorage.setItem(PANEL_KEY, String(finalWidth));
@@ -72,8 +81,9 @@ function useDeskPanelWidth() {
       };
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     },
     [width],
   );
@@ -289,10 +299,9 @@ export function DesktopApp() {
           aria-orientation="vertical"
           aria-label="调整左栏宽度"
           aria-hidden={collapsed}
-          onMouseDown={(event) => {
+          onPointerDown={(event) => {
             if (collapsed) return;
-            event.preventDefault();
-            startResize(event.clientX);
+            startResize(event);
           }}
         />
         <section className="desk__preview" aria-label="行程预览">

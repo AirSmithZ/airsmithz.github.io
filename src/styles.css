@@ -22,16 +22,45 @@
 
 * { box-sizing: border-box; }
 
+html {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+@supports not (scrollbar-width: thin) {
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
 html,
 body,
 #root {
   margin: 0;
   height: 100%;
-  height: 100svh;
   overflow: hidden;
   background: var(--bg-deep);
   color: var(--text);
   font-family: var(--sans);
+}
+
+#root {
+  position: fixed;
+  top: var(--vv-top, 0px);
+  left: 0;
+  right: 0;
+  height: 100svh;
+  height: var(--app-h, 100dvh);
+  max-height: var(--app-h, 100dvh);
 }
 
 body {
@@ -76,6 +105,8 @@ button {
 }
 
 .header {
+  position: relative;
+  z-index: 6;
   flex: none;
   display: flex;
   flex-wrap: wrap;
@@ -85,14 +116,26 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
+.header-scroll { display: contents; }
+
 .is-land .header {
   flex-wrap: nowrap;
+  padding-block: 6px;
+}
+
+/* 横滑只发生在按钮排。菜单留在外面，避免 overflow-x 把向下的下拉裁掉。 */
+.is-land .header-scroll {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   overflow-x: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
-  padding-block: 6px;
 }
-.is-land .header::-webkit-scrollbar { display: none; }
+.is-land .header-scroll::-webkit-scrollbar { display: none; }
 .is-short .menu,
 .is-land .menu { max-height: min(58vh, 280px); }
 
@@ -590,8 +633,9 @@ button {
 .col-head em { color: var(--accent); font-style: normal; }
 .col .trip-node--compact .trip-node__name {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
 }
 
@@ -816,10 +860,12 @@ button {
   padding: 12px 12px 12px 16px;
   border-radius: 16px;
   border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--leg-ink, var(--accent)) 16%, transparent), transparent 42%),
     color-mix(in srgb, var(--bg-elevated) 94%, transparent);
   box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 .map-leg::before {
@@ -1000,7 +1046,7 @@ button {
 }
 .modal-back {
   position: fixed;
-  top: 0;
+  top: var(--vv-top, 0px);
   left: 0;
   width: 100%;
   height: var(--app-h, 100dvh);
@@ -1404,8 +1450,9 @@ button {
 }
 .prep .is-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
 }
 .prep-form { margin-top: 8px; }

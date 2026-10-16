@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { capturePointer } from '../compat';
 import type { DayPlan } from '../types';
 import {
   CELL_PAD,
@@ -244,6 +245,7 @@ export function useMatrixDrag(
     layout: OverviewLayout,
   ) => {
     if (!enabled || event.button !== 0) return;
+    capturePointer(event.currentTarget, event.pointerId);
     sessionRef.current = {
       nodeId,
       dayIndex,
