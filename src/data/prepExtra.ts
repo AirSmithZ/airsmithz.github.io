@@ -11,21 +11,21 @@ export const EXTRA_NOTES = [
     id: "n33",
     chapter: "路上",
     title: "野生动物",
-    body: "维多利亚的公园里不能喂动物，也不要靠近袋鼠。见 Parks Victoria https://www.parks.vic.gov.au/things-to-do/wildlife-viewing、维州政府 https://www.vic.gov.au/kangaroo-and-wallaby-wildlife-management-methods。备忘里的「不能直视」这两页没有写。2 月 20 日袋鼠谷是园区，团的页面写可以买饲料，以园区当天的规定为准。原生动物在黎明和黄昏更活跃。市区晚上照常去吃饭。灌木、长草和夜里的岩池不走。鸽子看见禁止投喂的牌子就不要喂。这次没有查到一条全国禁令。",
+    body: "维多利亚的公园里不能喂动物，也不要靠近袋鼠。见 Parks Victoria https://www.parks.vic.gov.au/things-to-do/wildlife-viewing、维州政府 https://www.vic.gov.au/kangaroo-and-wallaby-wildlife-management-methods。备忘里的「不能直视」这两页没有写。2 月 13 日袋鼠谷是园区，团的页面写可以买饲料，以园区当天的规定为准。原生动物在黎明和黄昏更活跃。市区晚上照常去吃饭。灌木、长草和夜里的岩池不走。鸽子看见禁止投喂的牌子就不要喂。这次没有查到一条全国禁令。",
     strict: false,
   },
   {
     id: "n34",
     chapter: "路上",
     title: "街上、商店和公寓",
-    body: "有人行按钮就按，等绿色行人灯，车停稳再走。悉尼市中心有一段钟点自动放行，以按钮旁边的贴纸为准。见 Transport for NSW https://www.transport.nsw.gov.au/roadsafety/pedestrians/staying-safe。公交到站前按铃，留给司机停车的时间。见 transportnsw.info https://transportnsw.info/travel-info/safety-security/safety-when-travelling-by-bus。报站不稳定，下一站用离线地图对。商店没有全国统一的晚上 6 点关门，当天看门上的钟点。超市瓶装水看标价。备忘说有的比牛奶贵，这次没核价。这次住的是公寓，牙膏、牙刷、拖鞋自己带。耳塞和洗脸湿巾从国内带。备忘说湿巾在当地买贵，这次没核价。长途飞机穿那件抓绒。墨尔本昼夜大约差 10 度，短袖、薄外套、抓绒按冷热往上加，餐厅空调用那件薄外套。2 月 11 日大洋路坐一整天的车，晕车药和晕船药放在一起，上车前、开船前吃。十二使徒落在下午。备忘写下午容易逆光，这次没有用太阳高度去核，行程钟点不改。",
+    body: "有人行按钮就按，等绿色行人灯，车停稳再走。悉尼市中心有一段钟点自动放行，以按钮旁边的贴纸为准。见 Transport for NSW https://www.transport.nsw.gov.au/roadsafety/pedestrians/staying-safe。公交到站前按铃，留给司机停车的时间。见 transportnsw.info https://transportnsw.info/travel-info/safety-security/safety-when-travelling-by-bus。报站不稳定，下一站用离线地图对。商店没有全国统一的晚上 6 点关门，当天看门上的钟点。超市瓶装水看标价。备忘说有的比牛奶贵，这次没核价。这次住的是公寓，牙膏、牙刷、拖鞋自己带。耳塞和洗脸湿巾从国内带。备忘说湿巾在当地买贵，这次没核价。长途飞机穿那件抓绒。墨尔本昼夜大约差 10 度，短袖、薄外套、抓绒按冷热往上加，餐厅空调用那件薄外套。2 月 17 日大洋路坐一整天的车，晕车药和晕船药放在一起，上车前、开船前吃。十二使徒落在下午。备忘写下午容易逆光，这次没有用太阳高度去核，行程钟点不改。",
     strict: false,
   },
   {
     id: "n35",
     chapter: "钱和通讯",
     title: "退税，以及没排进去的点",
-    body: "退税走 TRS。同一家 ABN、含 GST 满 300 澳元，购买日在离开澳大利亚前 60 天内，英文发票，商品随身。只在离开澳大利亚的国际机场办，起飞前至少 30 分钟办完。离开澳大利亚的机场是 2 月 21 日的布里斯班。皇后镇办不了这笔澳洲退税。当天衔接大约 2 小时 55 分，退税不排进这天。见 ATO https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/in-detail/rules-for-specific-transactions/international-transactions/gst-free-sales-to-travellers-departing-australia/tourist-refund-scheme、ABF 国内段衔接 https://www.abf.gov.au/entering-and-leaving-australia/tourist-refund-scheme/domestic-connections-to-departing-international-flights-and-transiting。UGG、Aesop、奶粉这些没有官方必买名单。现金没有 150 到 200 澳元的官方下限。付款用卡。满 1 万澳元才申报。2 月 16 日下午去邦迪海滩，仍住 Luxury Stay。Little National Hotel Sydney 只作住宿参考，不换这一晚。这两天还有歌剧院、海德公园、悉尼大学。2 月 10 日是周三。维多利亚市场日市开周二、周四到周日，周三不开。南墨尔本市场周三、周五、周六、周日 8:00 起。见 Queen Victoria Market https://qvm.com.au/about/、South Melbourne Market https://www.southmelbournemarket.com.au/visit/opening-hours/。观鲸季是 5 到 10 月，2 月 14 日的船不靠这个。备忘里的 364 元不采用。蒸汽小火车不排。1180 元和右边座位这次没核。",
+    body: "退税走 TRS。同一家 ABN、含 GST 满 300 澳元，购买日在离开澳大利亚前 60 天内，英文发票，商品随身。只在离开澳大利亚的国际机场办，起飞前至少 30 分钟办完。离开澳大利亚的机场是 2 月 21 日的霍巴特。皇后镇办不了这笔澳洲退税。霍巴特有没有退税柜台这次没核，不排进这天。见 ATO https://www.ato.gov.au/businesses-and-organisations/gst-excise-and-indirect-taxes/gst/in-detail/rules-for-specific-transactions/international-transactions/gst-free-sales-to-travellers-departing-australia/tourist-refund-scheme、ABF 国内段衔接 https://www.abf.gov.au/entering-and-leaving-australia/tourist-refund-scheme/domestic-connections-to-departing-international-flights-and-transiting。UGG、Aesop、奶粉这些没有官方必买名单。现金没有 150 到 200 澳元的官方下限。付款用卡。满 1 万澳元才申报。2 月 15 日下午去邦迪海滩，仍住 Luxury Stay。Little National Hotel Sydney 只作住宿参考，不换这一晚。这两天还有歌剧院、海德公园、悉尼大学。2 月 16 日是周二。维多利亚市场日市周二开。南墨尔本市场周三、周五、周六、周日 8:00 起，周二不开。见 Queen Victoria Market https://qvm.com.au/about/、South Melbourne Market https://www.southmelbournemarket.com.au/visit/opening-hours/。观鲸季是 5 到 10 月，2 月 19 日的船不靠这个。备忘里的 364 元不采用。蒸汽小火车不排。1180 元和右边座位这次没核。",
     strict: false,
   },
 ];
@@ -149,7 +149,7 @@ export const SEED_APPS = [
     id: "a10",
     group: "叫车",
     name: "Uber",
-    detail: "墨尔本、悉尼、凯恩斯有。霍巴特不在这份城市名单里。https://web.didiglobal.com/au/help-center/where-is-didi-available/ 2 月 21 日凌晨去凯恩斯机场仍事先订出租车。",
+    detail: "墨尔本、悉尼、凯恩斯有。霍巴特不在这份城市名单里。https://web.didiglobal.com/au/help-center/where-is-didi-available/ 2 月 14 日早上离开凯恩斯，100 路若赶不上 06:40 的飞机，仍事先订出租车。",
     installed: false,
   },
   {

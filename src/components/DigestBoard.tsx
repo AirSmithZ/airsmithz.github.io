@@ -13,7 +13,7 @@ export function DigestBoard({ mode, onClose }: DigestBoardProps) {
         <div>
           <p className="eyebrow">21 天 · 9 段</p>
           <h2>行程汇总</h2>
-          <p className="fine">2 月 9 日 – 3 月 1 日。按当晚住下的地方分段。</p>
+          <p className="fine">2 月 8 日 – 3 月 1 日。按当晚住下的地方分段。</p>
         </div>
         <button type="button" className="text-btn digest__close" onClick={onClose}>
           关闭

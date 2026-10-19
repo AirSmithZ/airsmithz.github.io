@@ -1,4 +1,4 @@
-export const GUIDE_IDS = ['visa', 'licence', 'insure', 'au', 'nz', 'car'] as const;
+export const GUIDE_IDS = ['visa', 'licence', 'insure', 'au', 'nz', 'roo', 'car'] as const;
 
 export type GuideId = (typeof GUIDE_IDS)[number];
 
@@ -79,7 +79,7 @@ export const GUIDES: Guide[] = [
       },
       {
         title: '传护照，按当天价格付款',
-        body: '姓名和护照逐字一致。护照个人资料页要清晰。不是英文的材料附上英文翻译。在 Attach documents 这一页：选文件类型，写一句说明，选文件，点添加，再确认。单个文件不超过 5 MB。费用以提交当天的估价器为准。交完后签证是电子的，护照上没有贴纸。准签信留一份纸质、一份云端。没有它，南航不让登机。',
+        body: '姓名和护照逐字一致。护照个人资料页要清晰。不是英文的材料附上英文翻译。在 Attach documents 这一页：选文件类型，写一句说明，选文件，点添加，再确认。单个文件不超过 5 MB。费用以提交当天的估价器为准。交完后签证是电子的，护照上没有贴纸。准签信留一份纸质、一份云端。没有它，航空公司不让登机。',
         href: 'https://immi.homeaffairs.gov.au/visas/visa-pricing-estimator?visa=600',
         hrefLabel: '访客签证估价器',
         screen: {
@@ -215,7 +215,7 @@ export const GUIDES: Guide[] = [
     steps: [
       {
         title: '在持牌公司自己的页面买',
-        body: '用保险公司官网、它自己的应用，或银行和支付宝里该公司的投保页。保单写明澳大利亚和新西兰，日期从 2027 年 2 月 9 日盖到 3 月 1 日，四个人都在被保险人里。不要在代办签证的网站顺手买。',
+        body: '用保险公司官网、它自己的应用，或银行和支付宝里该公司的投保页。保单写明澳大利亚和新西兰，日期从 2027 年 2 月 8 日盖到 3 月 1 日，四个人都在被保险人里。不要在代办签证的网站顺手买。',
         href: 'https://cs.mfa.gov.cn/zggmcgx/lsbhyxz/cjwd_149483/202607/t20260713_11981016.html',
         hrefLabel: '外交部：行前购买合适的保险',
       },
@@ -227,7 +227,7 @@ export const GUIDES: Guide[] = [
           window: '保单条款',
           fields: [
             { label: '目的地', value: '澳大利亚、新西兰' },
-            { label: '保险期间', value: '2027-02-09 至 2027-03-01' },
+            { label: '保险期间', value: '2027-02-08 至 2027-03-01' },
             { label: '被保险人', value: '四个人都在' },
             { label: '活动', value: '跳伞、直升机、滑板、快艇、观光飞行' },
             { label: '救援电话', value: '抄进手机，保单离线留一份' },
@@ -252,19 +252,19 @@ export const GUIDES: Guide[] = [
     id: 'au',
     eyebrow: '2 月 10 日',
     title: '入境澳大利亚',
-    menuNote: '在墨尔本入境，飞机上填入境卡',
-    lede: '人坐南航进墨尔本。电子申报还只在澳航的应用里试点，这趟填纸质卡。后来从布里斯班飞走，那是离境，不用再入一次境。下面的实拍是悉尼机场。入境卡和自助机是同一套。通道在左还是在右，按墨尔本现场的牌子。',
+    menuNote: '在凯恩斯入境，飞机上填入境卡',
+    lede: '2 月 10 日 13:30 到凯恩斯。这一班是澳航、捷星中转，电子申报如果澳航应用里有就用应用，没有就在飞机上填纸质卡。第一晚住 Aveline。后来从霍巴特飞走，那是离境，不用再入一次境。下面的实拍是悉尼机场。入境卡和自助机是同一套。通道在左还是在右，按凯恩斯现场的牌子。',
     steps: [
       {
         title: '飞机上填纸质入境卡',
-        body: '正反面都填，本人签字，用英文，蓝笔或黑笔。简体中文样张只帮看懂题目，不能把答案写在样张上。第一晚地址写墨尔本旅馆 Absolute Collins。健康和犯罪记录按实情填。带一支笔。从中国出发、在广州转机，近 6 天没有去过黄热病流行的国家，不用带黄热病证明。',
+        body: '正反面都填，本人签字，用英文，蓝笔或黑笔。简体中文样张只帮看懂题目，不能把答案写在样张上。第一晚地址写凯恩斯旅馆 Aveline Dual-Key。健康和犯罪记录按实情填。带一支笔。从香港飞来，近 6 天没有去过黄热病流行的国家，不用带黄热病证明。',
         href: 'https://www.abf.gov.au/entering-leaving-australia/files/ipc-sample-chinese-simplified.pdf',
         hrefLabel: '入境卡简体中文样张（PDF）',
         screen: {
           caption: '题目来自边境执法局的简体中文样张。样张版式是 2019 年 7 月，飞机上以当场发的卡为准。',
           window: 'Incoming Passenger Card',
           fields: [
-            { label: '地址', value: 'Absolute Collins，墨尔本' },
+            { label: '地址', value: 'Aveline Dual-Key，凯恩斯' },
             { label: '食品和动植物', value: '有或拿不准，选 Yes' },
             { label: '药品', value: '常备药、维生素也选 Yes' },
             { label: '鞋和泥土', value: '乡下或淡水穿过的，选 Yes' },
@@ -286,13 +286,13 @@ export const GUIDES: Guide[] = [
           {
             src: 'arrival/6ab4f076000000001a023f6d/04.webp',
             alt: '入境卡中文填写说明，方框里打叉',
-            caption: '游客选 B。电话写 +86。地址写 Absolute Collins，墨尔本 VIC，不要抄图上的悉尼。有食品、药品或拿不准，那一题选「是」。图上多数题打在「否」，是拍摄者自己没带的情况。',
+            caption: '游客选 B。电话写 +86。地址写 Aveline Dual-Key，凯恩斯 QLD，不要抄图上的悉尼。有食品、药品或拿不准，那一题选「是」。图上多数题打在「否」，是拍摄者自己没带的情况。',
           },
         ],
       },
       {
         title: '食品和穿过的鞋主动交出',
-        body: '新鲜水果、蔬菜、种子、肉类、乳制品不要带。蜂蜜可以进大多数州，但要申报并接受检查。常备药和维生素也要申报，名称用英文写在卡上。拿不准的物品选 Yes。进墨尔本前把鞋底和包上的土、草、粪便洗掉并晾干。主动交给检查员就不罚款。瞒报违法。',
+        body: '新鲜水果、蔬菜、种子、肉类、乳制品不要带。蜂蜜可以进大多数州，但要申报并接受检查。常备药和维生素也要申报，名称用英文写在卡上。拿不准的物品选 Yes。进凯恩斯前把鞋底和包上的土、草、粪便洗掉并晾干。主动交给检查员就不罚款。瞒报违法。',
         href: 'https://www.agriculture.gov.au/biosecurity-trade/policy/faqs',
         hrefLabel: '农业部：什么必须申报',
       },
@@ -316,7 +316,7 @@ export const GUIDES: Guide[] = [
           {
             src: 'arrival/6ab4f076000000001a023f6d/06.webp',
             alt: '护照检查区排队使用的自助机',
-            caption: '自助机在 Passport Control 下面排队。头顶的国内转机牌子是悉尼航站楼。这趟在墨尔本进城，过完闸门去行李提取。',
+            caption: '自助机在 Passport Control 下面排队。头顶的国内转机牌子是悉尼航站楼。这趟在凯恩斯进城，过完闸门去行李提取。',
           },
           {
             src: 'arrival/6ab4f076000000001a023f6d/07.webp',
@@ -336,7 +336,7 @@ export const GUIDES: Guide[] = [
           {
             src: 'arrival/6ab4f076000000001a023f6d/05.webp',
             alt: '自助通道的小票样品和通道指示',
-            caption: '小票上有人脸，拿着往前走。红圈是拍摄者在悉尼画的。墨尔本不要按这个左右找路，认 SmartGate 和 Passport Control。',
+            caption: '小票上有人脸，拿着往前走。红圈是拍摄者在悉尼画的。凯恩斯不要按这个左右找路，认 SmartGate 和 Passport Control。',
           },
         ],
       },
@@ -367,12 +367,12 @@ export const GUIDES: Guide[] = [
     id: 'nz',
     eyebrow: '2 月 21 日',
     title: '入境新西兰',
-    menuNote: '在奥克兰入境，前一晚填好申报',
-    lede: '入境在奥克兰办，不在基督城。办完再转国内航班，衔接大约 1 小时 35 分。',
+    menuNote: '中转入境，前一晚填好申报',
+    lede: '2 月 21 日 12:25 从霍巴特飞基督城，21:25 到，1 次中转。中转城市这页没印。入境在中转的新西兰机场办，不在基督城。',
     steps: [
       {
         title: '2 月 20 日晚上在酒店填申报',
-        body: '每人一份，包括孩子。最早是飞往新西兰之前 24 小时，最晚到奥克兰查护照之前。免费，和护照绑在一起，不用打印，也不用出示二维码。只走官网或官方 NZTD 应用。应用商店下不到，就用网页。在网页上开始的申报，不能改到应用里提交。凌晨 3 点的出租车上不要临时填。答案用英文。',
+        body: '每人一份，包括孩子。最早是飞往新西兰之前 24 小时，最晚到中转机场查护照之前。免费，和护照绑在一起，不用打印，也不用出示二维码。只走官网或官方 NZTD 应用。应用商店下不到，就用网页。在网页上开始的申报，不能改到应用里提交。不要留到霍巴特去机场的车上再填。答案用英文。',
         href: 'https://www.travellerdeclaration.govt.nz/',
         hrefLabel: '新西兰旅客申报',
         screen: {
@@ -381,7 +381,7 @@ export const GUIDES: Guide[] = [
           fields: [
             { label: '护照', value: '可用应用扫描' },
             { label: '在新西兰的地址', value: '先写第一晚，基督城 Lylo' },
-            { label: '航班', value: '2 月 21 日凯恩斯出发' },
+            { label: '航班', value: '2 月 21 日霍巴特出发' },
             { label: '近 30 天', value: '去过的地方' },
             { label: '携带物品', value: '食品、鞋、木制品，有就选 Yes' },
             { label: '入境资格', value: 'NZeTA 或访客签证' },
@@ -389,11 +389,11 @@ export const GUIDES: Guide[] = [
         },
       },
       {
-        title: '凯恩斯值机时三样都要在',
+        title: '霍巴特值机时三样都要在',
         body: '澳大利亚访客签证仍然有效。NZeTA 或新西兰访客签证已经办好。能出示 3 月 1 日已经付款的离境机票。缺一样，航空公司可以不让上飞机。',
       },
       {
-        title: '在奥克兰走自助通道',
+        title: '在中转机场走自助通道',
         body: '中国电子护照、年满 10 岁、申报已经提交，可以用 eGate。护照放上扫描，看摄像头。申报在扫护照时自动核对。过了护照检查就不能再改。漏报了什么，当场告诉官员。过不了就走人工。',
         href: 'https://www.customs.govt.nz/travel-to-and-from-new-zealand/travel-by-air/egate',
         hrefLabel: '海关：eGate 使用条件',
@@ -413,6 +413,76 @@ export const GUIDES: Guide[] = [
         body: '食品、蜂蜜、肉、蛋、种子、木制品，以及穿过的户外鞋，申报里选 Yes。不申报可能被罚款或起诉。飞机上发的食物留在飞机上。在塔斯马尼亚和凯恩斯穿过的鞋，洗干净再申报。2 月 22 日人已经在新西兰，当天在基督城买的食品可以带上车。现金或折合达到 1 万纽元，另填现金申报。',
         href: 'https://www.mpi.govt.nz/bring-send-to-nz/bringing-and-posting-items-to-nz/travelling-to-new-zealand',
         hrefLabel: '初级产业部：入境可带物品',
+      },
+    ],
+  },
+  {
+    id: 'roo',
+    eyebrow: '离开澳洲前',
+    title: '袋鼠蛋蛋',
+    menuNote: '商店成品可申报带进新西兰，墨尔本 2 月 16 日买',
+    lede: '这是商店卖的袋鼠阴囊加工品，常见钥匙扣、开瓶器和零钱包。买成品，收据和原包装留着。2 月 20 日晚上填旅客申报时，动物皮毛选 Yes。检查在中转的新西兰机场，不在基督城。',
+    steps: [
+      {
+        title: '可以带，申报之后由官员看',
+        body: '初级产业部把动物皮做的纪念品算作风险物品，必须申报，到港后检查。商业制造、没有粘着的脂肪、肌肉、筋、血、土、虫害和腐烂，才符合观赏性动物制品的进口标准。放行没有保证。不申报，即使是忘了，当场 400 纽元；故意藏匿更重。商业捕猎的红袋鼠、东灰袋鼠、西灰袋鼠不在濒危物种贸易公约名单里，普通旅游纪念品一般不用另办许可证。生皮和带肉的不买。',
+        href: 'https://www.mpi.govt.nz/bring-send-to-nz/bringing-and-posting-items-to-nz/how-to-declare-items-when-arriving-in-nz',
+        hrefLabel: '初级产业部：入境如何申报',
+        screen: {
+          caption: '申报规则按 2026-10-19 打开的初级产业部页面。罚款页复核日 2024-05-07。',
+          window: 'New Zealand Traveller Declaration',
+          fields: [
+            { label: '何时填', value: '2 月 20 日晚上，人在霍巴特' },
+            { label: '动物皮毛', value: '有袋鼠蛋蛋就选 Yes' },
+            { label: '检查', value: '中转的新西兰机场，不在基督城' },
+            { label: '不申报', value: '当场 400 纽元' },
+          ],
+        },
+      },
+      {
+        title: '2 月 16 日在墨尔本买',
+        body: 'TravellerShop 把袋鼠蛋蛋写在自己的商品页上。地址 40 Elizabeth Street，市中心，皇家拱廊和弗林德斯街这一圈顺路。周一至周六 9:00–20:00，周日 9:30–19:30。电话 +61 3 9650 4595。2 月 16 日周二 11:10 落地，当天市区步行，赶得上。钥匙扣 33–36 澳元，开瓶器 37–42 澳元，标价是 2026-10-19 的页面。2 月 17 日全天在大洋路，不留到那天。',
+        href: 'https://www.travellershop.com.au/collections/kangaroo-scrotum',
+        hrefLabel: 'TravellerShop 袋鼠蛋蛋',
+        screen: {
+          caption: '地址、钟点和标价按 2026-10-19 打开的店家页面。',
+          window: '40 Elizabeth Street',
+          fields: [
+            { label: '店', value: 'TravellerShop' },
+            { label: '2 月 16 日', value: '周二，11:10 落地后进城' },
+            { label: '钟点', value: '周一至周六 9:00–20:00' },
+            { label: '钥匙扣', value: '33–36 澳元' },
+            { label: '开瓶器', value: '37–42 澳元' },
+          ],
+        },
+      },
+      {
+        title: '凯恩斯 2 月 10 日傍晚也能买',
+        body: '2 月 10 日 13:30 到凯恩斯，傍晚在潟湖。Love Cairns 在 Shop 6/93 The Esplanade，电话 (07) 4051 6363。同一连锁还有 Australia the Gift，107 Abbott Street，电话 0413 306 215。连锁官网有这条产品。店里当天有没有货、几点关门，页面没有逐店写死，第三方页面大约是每天 9:00–22:00，进店前再看门上的钟点。2 月 14 日 06:40 飞悉尼，不留到出发早上。',
+        href: 'https://www.australiathegift.com.au/product-category/australian-made/fur-leather/kangaroo-scrotum-souvenirs/',
+        hrefLabel: 'Australia the Gift 袋鼠蛋蛋',
+      },
+      {
+        title: '悉尼只剩 2 月 14 日周日',
+        body: 'Paddy\'s Markets Haymarket 的 Sydney Souvenirs 在 Stall 460，商品页有 Kangaroo Balls 钥匙扣，分类页从 29 澳元起。市场周三至周日 10:00–18:00，周一和周二关门。2 月 14 日周日 10:40 到悉尼，营业时间内赶得上，摊位在 Haymarket，不在歌剧院那条路上。2 月 15 日周一市场关门。环形码头 Gateway Plaza G16、1 Macquarie Place 的 Australia the Gift 是同一连锁，电话 (02) 9241 7788，店内库存网页没有逐店标，去之前打这个电话。',
+        href: 'https://www.paddysmarkets.com.au/haymarket/trading-hours',
+        hrefLabel: '帕迪市场 Haymarket 营业时间',
+        screen: {
+          caption: '市场钟点按官网。商品按 Sydney Souvenirs 和 Australian Made 页面，2026-10-19。',
+          window: 'Paddy\'s Markets Haymarket',
+          fields: [
+            { label: '摊位', value: 'Stall 460，Sydney Souvenirs' },
+            { label: '2 月 14 日', value: '周日 10:00–18:00，10:40 落地' },
+            { label: '2 月 15 日', value: '周一，市场关门' },
+            { label: '钥匙扣', value: '从 29 澳元起' },
+          ],
+        },
+      },
+      {
+        title: '霍巴特和新西兰没有查到这家货',
+        body: 'Australia the Gift 的门店名单里没有塔斯马尼亚。萨拉曼卡集市每周六 8:30–15:00，2 月 20 日正好是周六，摊位介绍里没有这件商品。基督城和皇后镇的纪念品店页面卖的是新西兰货。澳洲网店可以寄到新西兰，包裹仍要过生物安全，也赶不上这趟路上用。在墨尔本或更早买好。',
+        href: 'https://www.australiathegift.com.au/find-a-store/',
+        hrefLabel: 'Australia the Gift 门店名单',
       },
     ],
   },
