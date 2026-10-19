@@ -251,14 +251,23 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
   const [included, setIncluded] = useState<Included>('in');
   const [dayFocus, setDayFocus] = useState<string | null>(null);
   const [partFocus, setPartFocus] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLElement>(null);
+  const chartRef = useRef<HTMLDivElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const hoverEl = useRef<HTMLElement | null>(null);
+  const tipDismissed = useRef(false);
+  const tipAnchor = useRef<{ top: number; left: number } | null>(null);
+  const anchorFrame = useRef(0);
+  const pointerKind = useRef<string>('mouse');
+  const hoverBlockedUntil = useRef(0);
+  const gestureSlid = useRef(false);
 
   useEffect(() => {
     setDayFocus(null);
     setPartFocus(null);
     hoverEl.current = null;
+    tipDismissed.current = true;
   }, [scope, dayIndex, currency, included]);
 
   const currencies = useMemo(() => {
@@ -326,9 +335,11 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
     const tip = tipRef.current;
     const board = boardRef.current;
     if (!tip || !board) return;
-    const target = dayFocus
-      ? board.querySelector<HTMLElement>(`[data-col="${CSS.escape(dayFocus)}"]`)
-      : columnEl;
+    if (tipDismissed.current || !columnEl) {
+      tip.classList.remove('is-on');
+      return;
+    }
+    const target = columnEl;
     const column = target
       ? route.columns.find((item) => item.id === target.dataset.col) ?? null
       : null;
@@ -367,6 +378,19 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
     const left = Math.max(tipWidth / 2 + 8, Math.min(raw, boardBox.width - tipWidth / 2 - 8));
     tip.style.left = `${left}px`;
     tip.style.top = `${box.top - boardBox.top + 6}px`;
+    if (!tip.classList.contains('is-on')) {
+      tipAnchor.current = null;
+      cancelAnimationFrame(anchorFrame.current);
+      anchorFrame.current = requestAnimationFrame(() => {
+        anchorFrame.current = requestAnimationFrame(() => {
+          if (tipDismissed.current) return;
+          tipAnchor.current = {
+            top: rootRef.current?.scrollTop ?? 0,
+            left: chartRef.current?.scrollLeft ?? 0,
+          };
+        });
+      });
+    }
     tip.classList.add('is-on');
   };
 
@@ -374,8 +398,75 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
     paintTip(hoverEl.current);
   }, [route, dayFocus]);
 
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    let origin: { x: number; y: number } | null = null;
+
+    const hide = () => {
+      tipDismissed.current = true;
+      hoverEl.current = null;
+      tipAnchor.current = null;
+      hoverBlockedUntil.current = performance.now() + 360;
+      tipRef.current?.classList.remove('is-on');
+    };
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Node) || !root.contains(target)) return;
+      hoverBlockedUntil.current = performance.now() + 360;
+      if (tipDismissed.current) return;
+      const anchor = tipAnchor.current;
+      if (!anchor) return;
+      const top = root.scrollTop;
+      const left = chartRef.current?.scrollLeft ?? anchor.left;
+      if (Math.abs(top - anchor.top) < 2 && Math.abs(left - anchor.left) < 2) return;
+      hide();
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (tipDismissed.current || Math.abs(event.deltaX) + Math.abs(event.deltaY) < 1) return;
+      hide();
+    };
+    const onDown = (event: PointerEvent) => {
+      pointerKind.current = event.pointerType;
+      gestureSlid.current = false;
+      if (event.pointerType === 'mouse') {
+        origin = null;
+        return;
+      }
+      origin = { x: event.clientX, y: event.clientY };
+    };
+    const onSlide = (event: PointerEvent) => {
+      if (!origin || event.pointerType === 'mouse') return;
+      const dx = event.clientX - origin.x;
+      const dy = event.clientY - origin.y;
+      if (dx * dx + dy * dy < 16 * 16) return;
+      origin = null;
+      gestureSlid.current = true;
+      hide();
+    };
+    const onUp = () => {
+      origin = null;
+    };
+
+    window.addEventListener('scroll', onScroll, true);
+    root.addEventListener('wheel', onWheel, { passive: true });
+    root.addEventListener('pointerdown', onDown, true);
+    root.addEventListener('pointermove', onSlide, true);
+    root.addEventListener('pointerup', onUp, true);
+    root.addEventListener('pointercancel', onUp, true);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      root.removeEventListener('wheel', onWheel);
+      root.removeEventListener('pointerdown', onDown, true);
+      root.removeEventListener('pointermove', onSlide, true);
+      root.removeEventListener('pointerup', onUp, true);
+      root.removeEventListener('pointercancel', onUp, true);
+      cancelAnimationFrame(anchorFrame.current);
+    };
+  }, []);
+
   return (
-    <div className="expense">
+    <div ref={rootRef} className="expense">
       <header className="expense-head">
         <div>
           <h2>开销</h2>
@@ -424,12 +515,13 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
       <section ref={boardRef} className="spend-board" aria-label="开销看板">
         <h3 className="spend-board__title">每一天的人均，{unitLabel}</h3>
         <div
+          ref={chartRef}
           className={`route-chart${solo ? ' route-chart--solo' : ''}${dayFocus ? ' is-focused' : ''}`}
           onMouseLeave={() => {
             hoverEl.current = null;
-            if (!dayFocus) paintTip(null);
+            tipDismissed.current = true;
+            tipRef.current?.classList.remove('is-on');
           }}
-          onScroll={() => paintTip(hoverEl.current)}
         >
           {route.columns.map((column, index) => {
             const on = dayFocus === column.id;
@@ -451,18 +543,49 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
                 className={`route-chart__col${on ? ' is-on' : ''}`}
                 aria-pressed={on}
                 title={`${slots.find((slot) => slot.id === column.id)?.title ?? column.label} ${amount}`}
-                onClick={() => setDayFocus(on ? null : column.id)}
-                onMouseEnter={(event) => {
+                onClick={(event) => {
+                  const slid = gestureSlid.current;
+                  gestureSlid.current = false;
+                  setDayFocus(on ? null : column.id);
+                  if (slid) {
+                    tipDismissed.current = true;
+                    hoverEl.current = null;
+                    hoverBlockedUntil.current = performance.now() + 360;
+                    tipRef.current?.classList.remove('is-on');
+                    return;
+                  }
+                  tipDismissed.current = false;
+                  hoverBlockedUntil.current = 0;
                   hoverEl.current = event.currentTarget;
-                  if (!dayFocus) paintTip(event.currentTarget);
+                  paintTip(event.currentTarget);
+                }}
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== 'mouse' || performance.now() < hoverBlockedUntil.current) return;
+                  tipDismissed.current = false;
+                  hoverEl.current = event.currentTarget;
+                  paintTip(event.currentTarget);
+                }}
+                onPointerMove={(event) => {
+                  if (event.pointerType !== 'mouse' || performance.now() < hoverBlockedUntil.current) return;
+                  if (!tipDismissed.current && hoverEl.current === event.currentTarget && tipRef.current?.classList.contains('is-on')) return;
+                  tipDismissed.current = false;
+                  hoverEl.current = event.currentTarget;
+                  paintTip(event.currentTarget);
+                }}
+                onPointerLeave={(event) => {
+                  if (event.pointerType !== 'mouse') return;
+                  if (hoverEl.current === event.currentTarget) hoverEl.current = null;
+                  paintTip(null);
                 }}
                 onFocus={(event) => {
+                  if (pointerKind.current === 'touch' || performance.now() < hoverBlockedUntil.current) return;
+                  tipDismissed.current = false;
                   hoverEl.current = event.currentTarget;
-                  if (!dayFocus) paintTip(event.currentTarget);
+                  paintTip(event.currentTarget);
                 }}
                 onBlur={() => {
                   if (hoverEl.current?.dataset.col === column.id) hoverEl.current = null;
-                  if (!dayFocus) paintTip(hoverEl.current);
+                  paintTip(hoverEl.current);
                 }}
               >
                 <span className="route-chart__plot">
