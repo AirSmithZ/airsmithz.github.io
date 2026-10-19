@@ -45,7 +45,7 @@ export const DIGEST_STOPS: DigestStop[] = [
     items: ['City Walk（逛市集、植物园）'],
   },
   {
-    region: '费尔利',
+    region: '蒂卡波',
     country: '新西兰',
     when: '2 月 23 日',
     items: ['好牧羊人教堂', '银河'],

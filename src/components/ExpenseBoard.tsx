@@ -36,6 +36,16 @@ function dayId(row: QuoteRow): string {
   return row.day == null ? 'extra' : String(row.day);
 }
 
+function chartAmount(total: number): string {
+  if (total <= 0) return '';
+  if (total >= 10000) {
+    const wan = total / 10000;
+    const text = wan >= 10 ? String(Math.round(wan)) : wan.toFixed(1).replace(/\.0$/, '');
+    return `${text}万`;
+  }
+  return String(Math.round(total));
+}
+
 const CURRENCY_ORDER: QuoteCurrency[] = ['CNY', 'AUD', 'NZD'];
 
 function countedOf(quotes: CostQuote[]): MoneyTotal[] {
@@ -102,57 +112,6 @@ function DayTally({
       ) : null}
       {fx ? <p className="day-tally__note">{FX_NOTE}</p> : null}
       {aside && hero ? <p className="day-tally__note">未计入合计的行不在这个数里。</p> : null}
-    </section>
-  );
-}
-
-function SpendSum({
-  label,
-  hint,
-  part,
-  totals,
-  fx,
-  travelers,
-  showAsideNote,
-  empty,
-}: {
-  label: string;
-  hint?: string | null;
-  part?: string;
-  totals: MoneyTotal[];
-  fx: { perPerson: number; party: number } | null;
-  travelers: number;
-  showAsideNote: boolean;
-  empty: string;
-}) {
-  return (
-    <section className="part-sum" data-part={part} aria-label={label}>
-      <h3 className="part-sum__title">
-        {label}
-        {hint ? <small>{hint}</small> : null}
-      </h3>
-      {totals.length === 0 ? (
-        <p className="fine">{empty}</p>
-      ) : (
-        <>
-          <p className="spend-sums">
-            {totals.map((total) => (
-              <span key={total.currency}>
-                {currencyName(total.currency)}人均 {formatMoney(total.perPerson, total.currency)}
-                <small>{travelers} 人 {formatMoney(total.party, total.currency)}</small>
-              </span>
-            ))}
-          </p>
-          {fx ? (
-            <p className="part-sum__fx">
-              <span>折合人民币人均 {formatMoney(fx.perPerson, 'CNY')}</span>
-              <small>{travelers} 人 {formatMoney(fx.party, 'CNY')}</small>
-              <span className="fine">{FX_NOTE}</span>
-            </p>
-          ) : null}
-          {showAsideNote ? <p className="fine">未计入合计的行不在这个数里。</p> : null}
-        </>
-      )}
     </section>
   );
 }
@@ -228,12 +187,7 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
     return rows.filter((row) => includedOk(row, included) && currencyOk(row, currency) && dayId(row) === dayFocus);
   }, [rows, included, currency, dayFocus]);
   const dayCounted = useMemo(() => countedOf(dayRows.map((row) => row.quote)), [dayRows]);
-  const partCounted = useMemo(
-    () => (partFocus ? countedOf(visible.map((row) => row.quote)) : []),
-    [partFocus, visible],
-  );
   const dayFx = fxOf(dayCounted, currency);
-  const partFx = fxOf(partCounted, currency);
   const focusedDay = dayFocus && dayFocus !== 'extra'
     ? doc.itinerary.days.find((item) => String(item.day_index) === dayFocus) ?? null
     : null;
@@ -248,7 +202,7 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
             {scope === 'day' && day
               ? `${day.date.slice(5)} ${day.weekday} ${day.region ?? ''}`.trim()
               : `${doc.itinerary.days.length} 天`}
-            ，同行 {doc.travelers} 人。点一根柱只看这一天的合计。点一段颜色，合计下面才是对应的账。
+            ，同行 {doc.travelers} 人。点一根柱只看这一天的合计。点一段颜色，明细只留这一类。
           </p>
         </div>
       </header>
@@ -289,12 +243,10 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
       <section className="spend-board" aria-label="开销看板">
         <h3 className="spend-board__title">每一天的人均，{unitLabel}</h3>
         <div className={`route-chart${solo ? ' route-chart--solo' : ''}${dayFocus ? ' is-focused' : ''}`}>
-          {route.columns.map((column) => {
+          {route.columns.map((column, index) => {
             const on = dayFocus === column.id;
-            const px = maxDay > 0 && column.total > 0
-              ? Math.max(4, (column.total / maxDay) * 132)
-              : 0;
             const amount = column.total === 0 ? '0' : formatMoney(column.total, route.currency);
+            const compact = chartAmount(column.total);
             return (
               <button
                 key={column.id}
@@ -305,15 +257,24 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
                 onClick={() => setDayFocus(on ? null : column.id)}
               >
                 <span className="route-chart__plot">
-                  <span className="route-chart__stack" style={{ height: `${px}px` }}>
-                    {column.segments.map((segment) => (
-                      <span
-                        key={segment.id}
-                        className="route-chart__seg"
-                        data-part={segment.id}
-                        style={{ flexGrow: segment.perPerson }}
-                      />
-                    ))}
+                  {compact ? <span className="route-chart__amt">{compact}</span> : null}
+                  <span className="route-chart__well">
+                    <span
+                      className="route-chart__stack"
+                      style={{
+                        height: maxDay > 0 ? `${(column.total / maxDay) * 100}%` : '0%',
+                        animationDelay: `${Math.min(index, 16) * 26}ms`,
+                      }}
+                    >
+                      {column.segments.map((segment) => (
+                        <span
+                          key={segment.id}
+                          className="route-chart__seg"
+                          data-part={segment.id}
+                          style={{ flexGrow: segment.perPerson }}
+                        />
+                      ))}
+                    </span>
                   </span>
                 </span>
                 <span className="route-chart__tick">
@@ -359,12 +320,13 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
                   <button
                     key={bar.id}
                     type="button"
+                    data-part={bar.id}
                     className={on ? 'is-on' : ''}
                     aria-pressed={on}
                     onClick={() => setPartFocus(on ? null : bar.id)}
                   >
                     <i data-part={bar.id} />
-                    {bar.label}
+                    <span>{bar.label}</span>
                     <b>{formatMoney(bar.perPerson, parts.currency)}</b>
                   </button>
                 );
@@ -389,18 +351,6 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
           travelers={doc.travelers}
           aside={included !== 'in'}
           empty="这一天没有计入合计的数字。"
-        />
-      ) : null}
-      {partFocus && partLabel ? (
-        <SpendSum
-          part={partFocus}
-          label={`${partLabel}合计`}
-          hint={dayLabel}
-          totals={partCounted}
-          fx={partFx}
-          travelers={doc.travelers}
-          showAsideNote={included !== 'in'}
-          empty="这一类没有计入合计的数字。"
         />
       ) : null}
 
