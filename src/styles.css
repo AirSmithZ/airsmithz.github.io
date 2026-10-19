@@ -478,6 +478,27 @@ button {
   touch-action: pan-x pan-y;
 }
 
+/* 单日流程图只纵向滚，横向留给切日期。总行程列和地图不走这条。 */
+.board-scroll.board-scroll--day,
+.board-scroll.board-scroll--day .trip-node {
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+}
+.day-slide.is-slide-next { animation: day-slide-next 180ms ease; }
+.day-slide.is-slide-prev { animation: day-slide-prev 180ms ease; }
+@keyframes day-slide-next {
+  from { transform: translateX(28px); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes day-slide-prev {
+  from { transform: translateX(-28px); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .day-slide.is-slide-next,
+  .day-slide.is-slide-prev { animation: none; }
+}
+
 .day-banner { padding: 2px 16px 0; }
 .day-banner strong {
   display: block;

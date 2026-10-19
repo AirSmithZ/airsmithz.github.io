@@ -462,6 +462,9 @@ export function PhoneApp() {
                 dayIndex={ui.dayIndex}
                 crossEdges={crossEdges}
                 selectedId={ui.selectedId}
+                swipeDays
+                swipeLocked={Boolean(ui.editor)}
+                onSwipeDay={(index) => actions.setDay(index)}
                 onSelect={(id) => {
                   setSide(null);
                   actions.selectNode(id);
