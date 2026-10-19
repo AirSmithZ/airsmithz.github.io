@@ -406,7 +406,10 @@ export function DesktopApp() {
                 days={doc.itinerary.days}
                 dayIndex={ui.dayIndex}
                 locked={Boolean(ui.editor)}
-                onPick={(index) => actions.setDay(index)}
+                onPick={(index) => {
+                  actions.setDay(index);
+                  if (!ui.editor) setCollapsed(true);
+                }}
               />
             ) : (
               <p className="desk-note">

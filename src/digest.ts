@@ -47,19 +47,19 @@ export const DIGEST_STOPS: DigestStop[] = [
   {
     region: '费尔利',
     country: '新西兰',
-    when: '2 月 23–24 日',
-    items: ['拉卡亚观景', '好牧羊人教堂', '银河'],
+    when: '2 月 23 日',
+    items: ['好牧羊人教堂', '银河'],
   },
   {
     region: '瓦纳卡',
     country: '新西兰',
-    when: '2 月 25 日',
+    when: '2 月 24 日',
     items: ['Real Guns', '玩具博物馆', '箭镇', '跳伞', '银河'],
   },
   {
     region: '皇后镇',
     country: '新西兰',
-    when: '2 月 26 日–3 月 1 日',
+    when: '2 月 25–28 日',
     items: ['米尔福德峡湾', '皇后镇公园', '天际线', '鲨鱼快艇', '固定翼观赏冰川', '南极光（极小概率）', '银河'],
   },
 ];
