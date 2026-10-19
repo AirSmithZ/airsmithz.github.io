@@ -478,26 +478,30 @@ button {
   touch-action: pan-x pan-y;
 }
 
-/* 单日流程图只纵向滚，横向留给切日期。总行程列和地图不走这条。 */
-.board-scroll.board-scroll--day,
-.board-scroll.board-scroll--day .trip-node {
+/* 手机单日流程图：三页横排跟手翻。每一页自己上下滚。总行程和地图不走这里。 */
+.day-pager {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
   touch-action: pan-y;
   overscroll-behavior-x: none;
 }
-.day-slide.is-slide-next { animation: day-slide-next 180ms ease; }
-.day-slide.is-slide-prev { animation: day-slide-prev 180ms ease; }
-@keyframes day-slide-next {
-  from { transform: translateX(28px); opacity: 0.55; }
-  to { transform: none; opacity: 1; }
+.day-pager__track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
 }
-@keyframes day-slide-prev {
-  from { transform: translateX(-28px); opacity: 0.55; }
-  to { transform: none; opacity: 1; }
+.day-pager__page {
+  flex: none;
+  width: var(--pager-w, 100%);
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  box-sizing: border-box;
 }
-@media (prefers-reduced-motion: reduce) {
-  .day-slide.is-slide-next,
-  .day-slide.is-slide-prev { animation: none; }
-}
+.day-pager__page .trip-node { touch-action: pan-y; }
 
 .day-banner { padding: 2px 16px 0; }
 .day-banner strong {

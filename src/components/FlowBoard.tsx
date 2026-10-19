@@ -1,11 +1,22 @@
-import { useEffect, useRef, useState, type AnimationEvent, type CSSProperties } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type TransitionEvent } from 'react';
 import type { DayPlan, TripEdge, TripNode } from '../types';
 import { categoryMeta } from '../types';
 import { edgeModeWord } from '../trip';
 import { capturePointer } from '../compat';
 
 const SWIPE_SLOP = 10;
-const SWIPE_DISTANCE = 56;
+const SWIPE_MIN = 56;
+const SWIPE_RATIO = 0.33;
+const FLICK_SPEED = 0.45;
+const FLICK_MIN = 24;
+const RUBBER = 0.35;
+
+function pagerLayout(index: number, count: number, width: number) {
+  const start = Math.max(0, index - 1);
+  const end = Math.min(count - 1, index + 1);
+  const slot = index - start;
+  return { start, end, slot, base: -slot * width };
+}
 
 interface FlowBoardProps {
   days: DayPlan[];
@@ -20,6 +31,49 @@ interface FlowBoardProps {
   swipeLocked?: boolean;
   onSwipeDay?: (index: number) => void;
 }
+
+const DayFlow = memo(function DayFlow({
+  day,
+  crossEdges,
+  selectedId,
+  onSelect,
+}: {
+  day: DayPlan;
+  crossEdges: TripEdge[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <>
+      <header className="day-banner">
+        <strong>
+          D{day.day_index} {day.weekday} {day.date.slice(5)} {day.region}
+        </strong>
+        <p>{day.label}</p>
+      </header>
+      <ol className="day-flow">
+        {day.nodes.map((node, index) => {
+          const edge = incomingOf(day, crossEdges, node.id);
+          const selected = node.id === selectedId;
+          return (
+            <li key={node.id}>
+              {edge ? (
+                <p className="hop">
+                  {edgeModeWord(edge)}
+                  {edge.duration_minutes ? ` · ${edge.duration_minutes} 分钟` : ''}
+                  {edge.label ? ` · ${edge.label}` : ''}
+                </p>
+              ) : index > 0 ? (
+                <p className="hop hop--quiet">接着</p>
+              ) : null}
+              <NodeCard node={node} selected={selected} onSelect={onSelect} />
+            </li>
+          );
+        })}
+      </ol>
+    </>
+  );
+});
 
 function incomingOf(day: DayPlan, crossEdges: TripEdge[], nodeId: string): TripEdge | null {
   return (
@@ -101,24 +155,36 @@ export function FlowBoard({
   onSwipeDay,
 }: FlowBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
-  const [slide, setSlide] = useState<'next' | 'prev' | null>(null);
+  const pagerRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [drag, setDrag] = useState<{ x: number; animate: boolean } | null>(null);
   const seenDay = useRef(dayIndex);
-  const live = useRef({ locked: swipeLocked, dayIndex, dayCount: days.length, onSwipeDay });
-  live.current = { locked: swipeLocked, dayIndex, dayCount: days.length, onSwipeDay };
+  const phase = useRef<'idle' | 'drag' | 'anim'>('idle');
+  const settleRef = useRef<(() => void) | null>(null);
+  const live = useRef({ locked: swipeLocked, dayIndex, dayCount: days.length, onSwipeDay, width });
+  live.current = { locked: swipeLocked, dayIndex, dayCount: days.length, onSwipeDay, width };
   const daySwipe = swipeDays && scope === 'day';
 
-  useEffect(() => {
-    if (!slide) return;
-    const timer = window.setTimeout(() => setSlide(null), 240);
-    return () => window.clearTimeout(timer);
-  }, [slide, dayIndex]);
+  useLayoutEffect(() => {
+    const el = pagerRef.current;
+    if (!el || !daySwipe) return;
+    const apply = () => {
+      const next = el.clientWidth;
+      setWidth((prev) => (prev === next ? prev : next));
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [daySwipe]);
 
   useEffect(() => {
-    const el = boardRef.current;
+    const el = pagerRef.current;
     if (!el || !daySwipe) return;
 
     const pointers = new Set<number>();
-    let tracking: { id: number; x: number; y: number; axis: 'x' | 'y' | null } | null = null;
+    let tracking: { id: number; x: number; y: number; axis: 'x' | 'y' | null; lastX: number; lastT: number; velocity: number } | null = null;
     let suppressClick = false;
 
     const stopWindow = () => {
@@ -127,15 +193,41 @@ export function FlowBoard({
       window.removeEventListener('pointercancel', onCancel);
     };
 
+    const shownDx = (dx: number, index: number, count: number) => {
+      if (dx > 0 && index <= 0) return dx * RUBBER;
+      if (dx < 0 && index >= count - 1) return dx * RUBBER;
+      return dx;
+    };
+
+    const settle = (next: number | null) => {
+      if (settleRef.current == null) return;
+      const finish = settleRef.current;
+      settleRef.current = null;
+      finish();
+      if (next != null) live.current.onSwipeDay?.(next);
+      setDrag(null);
+      phase.current = 'idle';
+    };
+
     const onDown = (event: PointerEvent) => {
-      if (event.pointerType === 'mouse' || live.current.locked) return;
+      if (event.pointerType === 'mouse' || live.current.locked || phase.current === 'anim') return;
       if (pointers.size === 0) suppressClick = false;
       pointers.add(event.pointerId);
       if (pointers.size > 1) {
         tracking = null;
+        phase.current = 'idle';
+        setDrag({ x: 0, animate: true });
         return;
       }
-      tracking = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: null };
+      tracking = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        axis: null,
+        lastX: event.clientX,
+        lastT: performance.now(),
+        velocity: 0,
+      };
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
@@ -145,15 +237,26 @@ export function FlowBoard({
       if (!tracking || event.pointerId !== tracking.id) return;
       const dx = event.clientX - tracking.x;
       const dy = event.clientY - tracking.y;
-      if (tracking.axis) return;
-      if (Math.abs(dx) < SWIPE_SLOP && Math.abs(dy) < SWIPE_SLOP) return;
-      if (Math.abs(dx) > Math.abs(dy) * 1.2) {
-        tracking.axis = 'x';
-        suppressClick = true;
-        capturePointer(el, event.pointerId);
-      } else {
-        tracking.axis = 'y';
+      if (!tracking.axis) {
+        if (Math.abs(dx) < SWIPE_SLOP && Math.abs(dy) < SWIPE_SLOP) return;
+        if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+          tracking.axis = 'x';
+          suppressClick = true;
+          phase.current = 'drag';
+          capturePointer(el, event.pointerId);
+        } else {
+          tracking.axis = 'y';
+          return;
+        }
       }
+      if (tracking.axis !== 'x') return;
+      const now = performance.now();
+      const dt = now - tracking.lastT;
+      if (dt > 0) tracking.velocity = (event.clientX - tracking.lastX) / dt;
+      tracking.lastX = event.clientX;
+      tracking.lastT = now;
+      const { dayIndex: index, dayCount } = live.current;
+      setDrag({ x: shownDx(dx, index, dayCount), animate: false });
     };
 
     const onUp = (event: PointerEvent) => {
@@ -164,23 +267,42 @@ export function FlowBoard({
       }
       const dx = event.clientX - tracking.x;
       const dy = event.clientY - tracking.y;
+      const velocity = tracking.velocity;
       let horizontal = tracking.axis === 'x';
       if (!tracking.axis && (Math.abs(dx) >= SWIPE_SLOP || Math.abs(dy) >= SWIPE_SLOP)) {
         horizontal = Math.abs(dx) > Math.abs(dy) * 1.2;
       }
       tracking = null;
       if (pointers.size === 0) stopWindow();
-      if (horizontal) suppressClick = true;
-      if (!horizontal) return;
-      const { locked, dayIndex: index, dayCount, onSwipeDay: swipe } = live.current;
-      if (locked || !swipe || Math.abs(dx) < SWIPE_DISTANCE) return;
-      const next = index + (dx < 0 ? 1 : -1);
-      if (next < 0 || next >= dayCount) return;
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        setSlide(dx < 0 ? 'next' : 'prev');
+      if (!horizontal) {
+        phase.current = 'idle';
+        return;
       }
-      el.scrollTop = 0;
-      swipe(next);
+      suppressClick = true;
+      const { locked, dayIndex: index, dayCount, width: pageWidth } = live.current;
+      const threshold = Math.max(SWIPE_MIN, pageWidth * SWIPE_RATIO);
+      const flick = Math.abs(velocity) > FLICK_SPEED && Math.abs(dx) > FLICK_MIN;
+      let dir = 0;
+      if (dx < 0 && (dx <= -threshold || (flick && velocity < 0))) dir = 1;
+      if (dx > 0 && (dx >= threshold || (flick && velocity > 0))) dir = -1;
+      const next = index + dir;
+      const canGo = dir !== 0 && !locked && next >= 0 && next < dayCount && pageWidth > 0;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (canGo && reduce) {
+        live.current.onSwipeDay?.(next);
+        setDrag(null);
+        phase.current = 'idle';
+        return;
+      }
+      if (!canGo && (reduce || Math.abs(dx) < 1)) {
+        setDrag(null);
+        phase.current = 'idle';
+        return;
+      }
+      phase.current = 'anim';
+      const timer = window.setTimeout(() => settle(canGo ? next : null), 260);
+      settleRef.current = () => window.clearTimeout(timer);
+      setDrag({ x: canGo ? (dir > 0 ? -pageWidth : pageWidth) : 0, animate: true });
     };
 
     const onCancel = (event: PointerEvent) => {
@@ -188,8 +310,12 @@ export function FlowBoard({
       if (tracking && event.pointerId === tracking.id) {
         if (tracking.axis === 'x') suppressClick = true;
         tracking = null;
+        setDrag({ x: 0, animate: true });
       }
-      if (pointers.size === 0) stopWindow();
+      if (pointers.size === 0) {
+        stopWindow();
+        if (phase.current === 'drag') phase.current = 'idle';
+      }
     };
 
     const onClick = (event: MouseEvent) => {
@@ -205,11 +331,13 @@ export function FlowBoard({
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('click', onClick, true);
       stopWindow();
+      settleRef.current?.();
+      settleRef.current = null;
     };
   }, [daySwipe]);
 
   useEffect(() => {
-    const board = boardRef.current;
+    const board = daySwipe ? pageRef.current : boardRef.current;
     if (!board) return;
     const dayChanged = seenDay.current !== dayIndex;
     seenDay.current = dayIndex;
@@ -231,55 +359,73 @@ export function FlowBoard({
       left: needX ? Math.max(0, board.scrollLeft + (elRect.left - boxRect.left) - 12) : board.scrollLeft,
       behavior: 'smooth',
     });
-  }, [selectedId, scope, dayIndex]);
+  }, [selectedId, scope, dayIndex, daySwipe]);
 
-  function clearSlide(event: AnimationEvent<HTMLDivElement>) {
-    if (event.target !== event.currentTarget) return;
-    if (event.animationName !== 'day-slide-next' && event.animationName !== 'day-slide-prev') return;
-    setSlide(null);
+  function onTrackEnd(event: TransitionEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform') return;
+    if (phase.current !== 'anim') return;
+    const { dayIndex: index, dayCount, width: pageWidth } = live.current;
+    const layout = pagerLayout(index, dayCount, pageWidth);
+    const shown = layout.base + (drag?.x ?? 0);
+    const dir = (drag?.x ?? 0) < 0 ? 1 : -1;
+    const next = index + dir;
+    const moved = Math.abs(shown - layout.base) > pageWidth * 0.5;
+    if (moved && next >= 0 && next < dayCount) {
+      const finish = settleRef.current;
+      settleRef.current = null;
+      finish?.();
+      live.current.onSwipeDay?.(next);
+    } else {
+      settleRef.current?.();
+      settleRef.current = null;
+    }
+    setDrag(null);
+    phase.current = 'idle';
   }
 
   if (scope === 'day') {
     const day = days[dayIndex];
     if (!day) return <p className="empty-note">这一天还没有行程。</p>;
-    return (
-      <div
-        ref={boardRef}
-        className={`board-scroll${daySwipe ? ' board-scroll--day' : ''}`}
-        data-testid={daySwipe ? 'day-flow' : undefined}
-      >
+    if (daySwipe) {
+      const layout = pagerLayout(dayIndex, days.length, width);
+      const x = layout.base + (drag?.x ?? 0);
+      const pages = [];
+      for (let index = layout.start; index <= layout.end; index += 1) {
+        const item = days[index];
+        if (item) pages.push(item);
+      }
+      return (
         <div
-          key={day.date}
-          className={slide ? `day-slide is-slide-${slide}` : undefined}
-          onAnimationEnd={clearSlide}
+          ref={pagerRef}
+          className="day-pager"
+          data-testid="day-flow"
+          style={{ '--pager-w': `${width}px` } as CSSProperties}
         >
-          <header className="day-banner">
-            <strong>
-              D{day.day_index} {day.weekday} {day.date.slice(5)} {day.region}
-            </strong>
-            <p>{day.label}</p>
-          </header>
-          <ol className="day-flow">
-            {day.nodes.map((node, index) => {
-              const edge = incomingOf(day, crossEdges, node.id);
-              const selected = node.id === selectedId;
-              return (
-                <li key={node.id}>
-                  {edge ? (
-                    <p className="hop">
-                      {edgeModeWord(edge)}
-                      {edge.duration_minutes ? ` · ${edge.duration_minutes} 分钟` : ''}
-                      {edge.label ? ` · ${edge.label}` : ''}
-                    </p>
-                  ) : index > 0 ? (
-                    <p className="hop hop--quiet">接着</p>
-                  ) : null}
-                  <NodeCard node={node} selected={selected} onSelect={onSelect} />
-                </li>
-              );
-            })}
-          </ol>
+          <div
+            className="day-pager__track"
+            style={{
+              transform: `translate3d(${x}px, 0, 0)`,
+              transition: drag?.animate ? 'transform 180ms ease' : 'none',
+            }}
+            onTransitionEnd={onTrackEnd}
+          >
+            {pages.map((item) => (
+              <div
+                key={item.date}
+                className="day-pager__page"
+                ref={item.date === day.date ? pageRef : undefined}
+                aria-hidden={item.date !== day.date}
+              >
+                <DayFlow day={item} crossEdges={crossEdges} selectedId={selectedId} onSelect={onSelect} />
+              </div>
+            ))}
+          </div>
         </div>
+      );
+    }
+    return (
+      <div ref={boardRef} className="board-scroll">
+        <DayFlow day={day} crossEdges={crossEdges} selectedId={selectedId} onSelect={onSelect} />
       </div>
     );
   }
