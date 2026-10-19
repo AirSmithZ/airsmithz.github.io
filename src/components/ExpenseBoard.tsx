@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { DayPager } from './DayPager';
 import type { CostQuote, Doc, QuoteCurrency } from '../types';
 import {
   currencyName,
@@ -19,6 +20,27 @@ interface ExpenseBoardProps {
   scope: 'day' | 'all';
   dayIndex: number;
   onOpenNode?: (nodeId: string) => void;
+  /** 手机壳的单日开销才打开左右滑切日期。 */
+  swipeDays?: boolean;
+  swipeLocked?: boolean;
+  onSwipeDay?: (index: number) => void;
+}
+
+interface ExpenseSheetProps {
+  doc: Doc;
+  scope: 'day' | 'all';
+  dayIndex: number;
+  onOpenNode?: (nodeId: string) => void;
+  currency: QuoteCurrency | 'all';
+  setCurrency: (currency: QuoteCurrency | 'all') => void;
+  included: Included;
+  setIncluded: (included: Included) => void;
+}
+
+function scrollHost(root: HTMLElement | null): HTMLElement | null {
+  const parent = root?.parentElement;
+  if (parent?.classList.contains('day-pager__page')) return parent;
+  return root;
 }
 
 type Included = 'in' | 'out' | 'all';
@@ -243,12 +265,19 @@ function DayTally({
   );
 }
 
-export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardProps) {
+const ExpenseSheet = memo(function ExpenseSheet({
+  doc,
+  scope,
+  dayIndex,
+  onOpenNode,
+  currency,
+  setCurrency,
+  included,
+  setIncluded,
+}: ExpenseSheetProps) {
   const day = doc.itinerary.days[dayIndex];
   const rows = useMemo(() => collectQuotes(doc, scope === 'day' ? dayIndex : null), [doc, scope, dayIndex]);
   const totals = useMemo(() => rollupQuotes(rows.map((row) => row.quote)), [rows]);
-  const [currency, setCurrency] = useState<QuoteCurrency | 'all'>('all');
-  const [included, setIncluded] = useState<Included>('in');
   const [dayFocus, setDayFocus] = useState<string | null>(null);
   const [partFocus, setPartFocus] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -385,7 +414,7 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
         anchorFrame.current = requestAnimationFrame(() => {
           if (tipDismissed.current) return;
           tipAnchor.current = {
-            top: rootRef.current?.scrollTop ?? 0,
+            top: scrollHost(rootRef.current)?.scrollTop ?? 0,
             left: chartRef.current?.scrollLeft ?? 0,
           };
         });
@@ -412,12 +441,13 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
     };
     const onScroll = (event: Event) => {
       const target = event.target;
-      if (!(target instanceof Node) || !root.contains(target)) return;
+      const host = scrollHost(root);
+      if (!(target instanceof Node) || !host || (target !== host && !root.contains(target))) return;
       hoverBlockedUntil.current = performance.now() + 360;
       if (tipDismissed.current) return;
       const anchor = tipAnchor.current;
       if (!anchor) return;
-      const top = root.scrollTop;
+      const top = host.scrollTop;
       const left = chartRef.current?.scrollLeft ?? anchor.left;
       if (Math.abs(top - anchor.top) < 2 && Math.abs(left - anchor.left) < 2) return;
       hide();
@@ -740,5 +770,43 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
         })}
       </ul>}
     </div>
+  );
+});
+
+export function ExpenseBoard({
+  doc,
+  scope,
+  dayIndex,
+  onOpenNode,
+  swipeDays = false,
+  swipeLocked = false,
+  onSwipeDay,
+}: ExpenseBoardProps) {
+  const [currency, setCurrency] = useState<QuoteCurrency | 'all'>('all');
+  const [included, setIncluded] = useState<Included>('in');
+  const sheet = (index: number) => (
+    <ExpenseSheet
+      doc={doc}
+      scope={scope}
+      dayIndex={index}
+      onOpenNode={onOpenNode}
+      currency={currency}
+      setCurrency={setCurrency}
+      included={included}
+      setIncluded={setIncluded}
+    />
+  );
+  const swipe = swipeDays && scope === 'day' && doc.itinerary.days.length > 0;
+  if (!swipe) return sheet(dayIndex);
+  return (
+    <DayPager
+      index={dayIndex}
+      count={doc.itinerary.days.length}
+      locked={swipeLocked || !onSwipeDay}
+      onChange={(index) => onSwipeDay?.(index)}
+      pageKey={(index) => doc.itinerary.days[index]?.date ?? String(index)}
+      testId="day-expense"
+      renderPage={sheet}
+    />
   );
 }

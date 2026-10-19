@@ -438,7 +438,14 @@ export function PhoneApp() {
               </Suspense>
             </div>
             <div className={`view view--front${ui.panel === 'cost' ? '' : ' is-off'}`}>
-              <ExpenseBoard doc={doc} scope={ui.scope} dayIndex={ui.dayIndex} />
+              <ExpenseBoard
+                doc={doc}
+                scope={ui.scope}
+                dayIndex={ui.dayIndex}
+                swipeDays
+                swipeLocked={Boolean(ui.editor)}
+                onSwipeDay={(index) => actions.setDay(index)}
+              />
             </div>
           </div>
         </main>

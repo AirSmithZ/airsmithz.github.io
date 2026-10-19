@@ -514,7 +514,7 @@ button {
   touch-action: pan-x pan-y;
 }
 
-/* 手机单日流程图：三页横排跟手翻。每一页自己上下滚。总行程和地图不走这里。
+/* 手机单日流程图、单日开销：三页横排跟手翻。每一页自己上下滚。总行程和地图不走这里。
    手势进行中由脚本分轴，并在按下后立刻吃掉触摸滚动。若仍交给浏览器 pan-y，开头的上下抖动会把左右滑判成滚动。 */
 .day-pager {
   position: absolute;
@@ -537,6 +537,14 @@ button {
   overscroll-behavior: contain;
   touch-action: pan-y;
   box-sizing: border-box;
+}
+.day-pager__page > .expense {
+  position: relative;
+  inset: auto;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
 }
 .day-pager--gesture,
 .day-pager--gesture * {
