@@ -547,6 +547,7 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
                   const slid = gestureSlid.current;
                   gestureSlid.current = false;
                   setDayFocus(on ? null : column.id);
+                  setPartFocus(null);
                   if (slid) {
                     tipDismissed.current = true;
                     hoverEl.current = null;
@@ -655,7 +656,14 @@ export function ExpenseBoard({ doc, scope, dayIndex, onOpenNode }: ExpenseBoardP
                   }}
                   aria-pressed={on}
                   title={`${bar.label} ${formatMoney(bar.perPerson, parts.currency)}`}
-                  onClick={() => setPartFocus(on ? null : bar.id)}
+                  onClick={() => {
+                    setPartFocus(on ? null : bar.id);
+                    setDayFocus(null);
+                    tipDismissed.current = true;
+                    hoverEl.current = null;
+                    tipAnchor.current = null;
+                    tipRef.current?.classList.remove('is-on');
+                  }}
                 >
                   <span className="share-tile__swatch" />
                   <span className="share-tile__mark">
