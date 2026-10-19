@@ -271,7 +271,7 @@ button {
   box-shadow: var(--shadow);
 }
 
-/* 竖屏第二行「布局」右边还有「更多」。菜单若贴着按钮右缘、再取 88vw，
+/* 竖屏「更多」贴在标题栏右侧。菜单若跟按钮走、再取 88vw，
    左缘会冲出屏幕，被 .shell 的 overflow:hidden 裁掉。改挂到整条 header 上。 */
 .is-port .menu-wrap { position: static; }
 
@@ -423,15 +423,17 @@ button {
   overflow-x: auto;
   overscroll-behavior: contain;
   touch-action: pan-x;
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
+  padding-block: 1px;
 }
 .day-strip::-webkit-scrollbar { display: none; }
 
 .day-chip {
   flex: none;
-  min-width: 72px;
-  min-height: 44px;
-  padding: 4px 10px;
+  min-width: 84px;
+  min-height: 52px;
+  padding: 6px 10px 5px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
@@ -439,22 +441,49 @@ button {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
+  gap: 1px;
   line-height: 1.15;
+  scroll-snap-align: start;
 }
 .day-chip b {
   font-family: var(--display);
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
 }
-.day-chip span,
-.day-chip small { font-size: 11px; color: var(--text-muted); }
-.day-chip.is-on {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  background: linear-gradient(160deg, var(--accent-soft), var(--bg-panel));
+.day-chip span {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
   color: var(--text);
+  white-space: nowrap;
+}
+.day-chip span i {
+  margin-left: 6px;
+  font-style: normal;
+  font-weight: 650;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+.day-chip small {
+  max-width: 88px;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.day-chip.is-on {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: linear-gradient(165deg, var(--accent-soft), var(--bg-panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .day-chip.is-on b { color: var(--accent); }
-.day-chip.is-on span,
+.day-chip.is-on span { color: var(--text); }
 .day-chip.is-on small { color: var(--text-muted); }
 .day-chip:disabled { opacity: 0.4; }
 

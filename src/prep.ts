@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import { clearPrepManual, ensureFreshSeed, LEGACY_PREP_KEY, markPrepManual, PREP_KEYS } from './dataVersion';
 import { EXTRA_NOTES, EXTRA_PACKS, SEED_APPS } from './data/prepExtra';
 
 export type PrepKind = 'todo' | 'note' | 'pack' | 'app';
@@ -206,13 +207,6 @@ const SEED_PACKS: PackItem[] = [
   ...EXTRA_PACKS,
 ];
 
-const KEY: Record<PrepKind, string> = {
-  todo: 'anz-prep-todo-v2',
-  note: 'anz-prep-note-v4',
-  pack: 'anz-prep-pack-v3',
-  app: 'anz-prep-app-v2',
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
@@ -270,6 +264,7 @@ function asApp(value: unknown): AppItem | null {
 }
 
 function readList<T>(key: string, seed: T[], cast: (value: unknown) => T | null): { items: T[]; ok: boolean } {
+  ensureFreshSeed();
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) {
@@ -342,10 +337,11 @@ function withPrevious<T extends { id: string }>(nextKey: string, previousKey: st
   }
 }
 
-const loadedTodo = readList(KEY.todo, withPrevious(KEY.todo, 'anz-prep-todo-v1', cloneTodos(), asTodo), asTodo);
-const loadedNote = readList(KEY.note, withPrevious(KEY.note, 'anz-prep-note-v3', cloneNotes(), asNote), asNote);
-const loadedPack = readList(KEY.pack, withPrevious(KEY.pack, 'anz-prep-pack-v2', clonePacks(), asPack), asPack);
-const loadedApp = readList(KEY.app, withPrevious(KEY.app, 'anz-prep-app-v1', cloneApps(), asApp), asApp);
+ensureFreshSeed();
+const loadedTodo = readList(PREP_KEYS.todo, withPrevious(PREP_KEYS.todo, LEGACY_PREP_KEY.todo, cloneTodos(), asTodo), asTodo);
+const loadedNote = readList(PREP_KEYS.note, withPrevious(PREP_KEYS.note, LEGACY_PREP_KEY.note, cloneNotes(), asNote), asNote);
+const loadedPack = readList(PREP_KEYS.pack, withPrevious(PREP_KEYS.pack, LEGACY_PREP_KEY.pack, clonePacks(), asPack), asPack);
+const loadedApp = readList(PREP_KEYS.app, withPrevious(PREP_KEYS.app, LEGACY_PREP_KEY.app, cloneApps(), asApp), asApp);
 
 let todos = loadedTodo.items;
 let notes = loadedNote.items;
@@ -360,9 +356,11 @@ function emit(): void {
   listeners.forEach((listener) => listener());
 }
 
-function writeKind(kind: PrepKind): void {
+function writeKind(kind: PrepKind, manual: boolean): void {
+  if (manual) markPrepManual(kind);
+  else clearPrepManual(kind);
   const value = kind === 'todo' ? todos : kind === 'note' ? notes : kind === 'pack' ? packs : apps;
-  if (!writeRaw(KEY[kind], value)) storageOk = false;
+  if (!writeRaw(PREP_KEYS[kind], value)) storageOk = false;
   emit();
 }
 
@@ -386,81 +384,81 @@ export function usePrep() {
 export const prepActions = {
   addTodo(group: string, text: string, note: string) {
     todos = [...todos, { id: newPrepId('t'), group, text, note, done: false }];
-    writeKind('todo');
+    writeKind('todo', true);
   },
   updateTodo(id: string, patch: Pick<TodoItem, 'group' | 'text' | 'note'>) {
     todos = todos.map((item) => (item.id === id ? { ...item, ...patch } : item));
-    writeKind('todo');
+    writeKind('todo', true);
   },
   toggleTodo(id: string) {
     todos = todos.map((item) => (item.id === id ? { ...item, done: !item.done } : item));
-    writeKind('todo');
+    writeKind('todo', true);
   },
   removeTodo(id: string) {
     todos = todos.filter((item) => item.id !== id);
-    writeKind('todo');
+    writeKind('todo', true);
   },
   resetTodos() {
     todos = cloneTodos();
-    writeKind('todo');
+    writeKind('todo', false);
   },
   addNote(chapter: string, title: string, body: string, strict: boolean) {
     notes = [...notes, { id: newPrepId('n'), chapter, title, body, strict }];
-    writeKind('note');
+    writeKind('note', true);
   },
   updateNote(id: string, patch: Pick<NoteItem, 'chapter' | 'title' | 'body' | 'strict'>) {
     notes = notes.map((item) => (item.id === id ? { ...item, ...patch } : item));
-    writeKind('note');
+    writeKind('note', true);
   },
   removeNote(id: string) {
     notes = notes.filter((item) => item.id !== id);
-    writeKind('note');
+    writeKind('note', true);
   },
   resetNotes() {
     notes = cloneNotes();
-    writeKind('note');
+    writeKind('note', false);
   },
   addPack(group: string, text: string) {
     packs = [...packs, { id: newPrepId('p'), group, text, packed: false }];
-    writeKind('pack');
+    writeKind('pack', true);
   },
   updatePack(id: string, patch: Pick<PackItem, 'group' | 'text'>) {
     packs = packs.map((item) => (item.id === id ? { ...item, ...patch, packed: patch.group === '不带' ? false : item.packed } : item));
-    writeKind('pack');
+    writeKind('pack', true);
   },
   togglePack(id: string) {
     packs = packs.map((item) => (item.id === id && item.group !== '不带' ? { ...item, packed: !item.packed } : item));
-    writeKind('pack');
+    writeKind('pack', true);
   },
   removePack(id: string) {
     packs = packs.filter((item) => item.id !== id);
-    writeKind('pack');
+    writeKind('pack', true);
   },
   resetPacks() {
     packs = clonePacks();
-    writeKind('pack');
+    writeKind('pack', false);
   },
   addApp(group: string, name: string, detail: string) {
     apps = [...apps, { id: newPrepId('a'), group, name, detail, installed: false }];
-    writeKind('app');
+    writeKind('app', true);
   },
   updateApp(id: string, patch: Pick<AppItem, 'group' | 'name' | 'detail'>) {
     apps = apps.map((item) =>
       item.id === id ? { ...item, ...patch, installed: patch.group === '不装' ? false : item.installed } : item,
     );
-    writeKind('app');
+    writeKind('app', true);
   },
   toggleApp(id: string) {
     apps = apps.map((item) => (item.id === id && item.group !== '不装' ? { ...item, installed: !item.installed } : item));
-    writeKind('app');
+    writeKind('app', true);
   },
   removeApp(id: string) {
     apps = apps.filter((item) => item.id !== id);
-    writeKind('app');
+    writeKind('app', true);
   },
   resetApps() {
     apps = cloneApps();
-    writeKind('app');
+    writeKind('app', false);
   },
 };
 

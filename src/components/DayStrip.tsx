@@ -34,8 +34,11 @@ export function DayStrip({ days, dayIndex, locked, onPick }: DayStripProps) {
             onClick={() => onPick(index)}
           >
             <b>D{day.day_index}</b>
-            <span>{day.date.slice(5)}</span>
-            <small>{day.region || day.weekday}</small>
+            <span>
+              {day.date.slice(5)}
+              <i>{day.weekday}</i>
+            </span>
+            {day.region ? <small>{day.region}</small> : null}
           </button>
         );
       })}

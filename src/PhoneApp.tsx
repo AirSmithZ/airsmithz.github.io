@@ -10,7 +10,7 @@ import { GuideBoard } from './components/GuideBoard';
 import { isGuideId, GUIDES, type GuideId } from './guides';
 import { isPrepKind, PREP_META, type PrepKind } from './prep';
 import { readViewportBox } from './compat';
-import type { LayoutLock, PanelId, Scope, TripEdge } from './types';
+import type { PanelId, Scope, TripEdge } from './types';
 
 const TripMap = lazy(() => import('./components/TripMap').then((mod) => ({ default: mod.TripMap })));
 
@@ -106,16 +106,10 @@ function PhoneDialog({
   );
 }
 
-const LAYOUTS: { id: LayoutLock; label: string; note: string }[] = [
-  { id: 'auto', label: '跟随旋转', note: '横握用左侧详情，可收起。竖握点站点打开弹框。' },
-  { id: 'portrait', label: '竖版', note: '点流程或地图上的站点，弹框看详情，可以关掉。' },
-  { id: 'landscape', label: '横版', note: '详情固定在左侧，可以收起或展开。' },
-];
-
 export function PhoneApp() {
   const { doc, ui, storageOk } = useTrip();
   const box = useDeviceBox();
-  const [menu, setMenu] = useState<null | 'layout' | 'more'>(null);
+  const [menu, setMenu] = useState(false);
   const [askReset, setAskReset] = useState(false);
   const [desk, setDesk] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
@@ -159,12 +153,12 @@ export function PhoneApp() {
   }, [land, ui.editor]);
 
   function choosePanel(panel: PanelId) {
-    setMenu(null);
+    setMenu(false);
     actions.setPanel(panel);
   }
 
   function chooseScope(scope: Scope) {
-    setMenu(null);
+    setMenu(false);
     actions.setScope(scope);
   }
 
@@ -241,63 +235,17 @@ export function PhoneApp() {
             总行程
           </button>
         </div>
-        {!land ? (
-          <button
-            type="button"
-            className={`icon-btn${modalOpen ? ' is-on' : ''}`}
-            aria-expanded={modalOpen}
-            data-testid="open-node-panel"
-            onClick={() => {
-              setMenu(null);
-              if (modalOpen) hideModal();
-              else setDesk(true);
-            }}
-          >
-            {modalOpen ? '隐藏' : '节点'}
-          </button>
-        ) : null}
         </div>
         <div className="menu-wrap">
           <button
             type="button"
             className="icon-btn"
-            aria-expanded={menu === 'layout'}
-            data-testid="layout"
-            onClick={() => setMenu((current) => (current === 'layout' ? null : 'layout'))}
-          >
-            布局
-          </button>
-          {menu === 'layout' && (
-            <div className="menu" role="menu">
-              {LAYOUTS.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={ui.layoutLock === item.id}
-                  className={ui.layoutLock === item.id ? 'is-on' : ''}
-                  onClick={() => {
-                    actions.setLayoutLock(item.id);
-                    setMenu(null);
-                  }}
-                >
-                  <b>{item.label}</b>
-                  <small>{item.note}</small>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="menu-wrap">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-expanded={menu === 'more'}
-            onClick={() => setMenu((current) => (current === 'more' ? null : 'more'))}
+            aria-expanded={menu}
+            onClick={() => setMenu((open) => !open)}
           >
             更多
           </button>
-          {menu === 'more' && (
+          {menu && (
             <div className="menu" role="menu">
               <p className="menu-note">
                 {doc.origin === 'seed'
@@ -308,7 +256,7 @@ export function PhoneApp() {
                 type="button"
                 data-testid="open-digest"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   actions.closeDetail();
                   setDesk(false);
                   setSide('digest');
@@ -322,7 +270,7 @@ export function PhoneApp() {
                 type="button"
                 data-testid="open-todo"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   actions.closeDetail();
                   setDesk(false);
                   setSide('todo');
@@ -338,7 +286,7 @@ export function PhoneApp() {
                   type="button"
                   data-testid={`open-guide-${guide.id}`}
                   onClick={() => {
-                    setMenu(null);
+                    setMenu(false);
                     actions.closeDetail();
                     setDesk(false);
                     setSide(guide.id);
@@ -353,7 +301,7 @@ export function PhoneApp() {
                 type="button"
                 data-testid="open-notes"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   actions.closeDetail();
                   setDesk(false);
                   setSide('note');
@@ -367,7 +315,7 @@ export function PhoneApp() {
                 type="button"
                 data-testid="open-pack"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   actions.closeDetail();
                   setDesk(false);
                   setSide('pack');
@@ -381,7 +329,7 @@ export function PhoneApp() {
                 type="button"
                 data-testid="open-apps"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   actions.closeDetail();
                   setDesk(false);
                   setSide('app');
@@ -395,7 +343,7 @@ export function PhoneApp() {
                 type="button"
                 className="danger-item"
                 onClick={() => {
-                  setMenu(null);
+                  setMenu(false);
                   setAskReset(true);
                 }}
               >
@@ -436,21 +384,21 @@ export function PhoneApp() {
         ) : null}
 
         <main className="stage">
-          {ui.panel !== 'cost' ? (
+          {ui.scope === 'day' ? (
             <div className="strip-row">
-              {ui.scope === 'day' ? (
-                <DayStrip
-                  days={doc.itinerary.days}
-                  dayIndex={ui.dayIndex}
-                  locked={Boolean(ui.editor)}
-                  onPick={(index) => actions.setDay(index)}
-                />
-              ) : (
-                <p className="strip-note">
-                  总行程 {doc.itinerary.days.length} 天。点列头只是换到那天看，日期本身不能改。
-                  {day ? ` 当前 D${day.day_index} ${day.region ?? ''}。` : ''}
-                </p>
-              )}
+              <DayStrip
+                days={doc.itinerary.days}
+                dayIndex={ui.dayIndex}
+                locked={Boolean(ui.editor)}
+                onPick={(index) => actions.setDay(index)}
+              />
+            </div>
+          ) : ui.panel !== 'cost' ? (
+            <div className="strip-row">
+              <p className="strip-note">
+                总行程 {doc.itinerary.days.length} 天。点列头只是换到那天看，日期本身不能改。
+                {day ? ` 当前 D${day.day_index} ${day.region ?? ''}。` : ''}
+              </p>
             </div>
           ) : null}
 
@@ -496,7 +444,7 @@ export function PhoneApp() {
         </main>
       </div>
 
-      {menu ? <button type="button" className="menu-dismiss" aria-label="关闭菜单" onClick={() => setMenu(null)} /> : null}
+      {menu ? <button type="button" className="menu-dismiss" aria-label="关闭菜单" onClick={() => setMenu(false)} /> : null}
 
       <PhoneDialog sheet open={!land && side === 'digest'} label="行程汇总" onClose={() => setSide(null)}>
         <DigestBoard mode="port" onClose={() => setSide(null)} />

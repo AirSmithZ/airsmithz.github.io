@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { CostQuote, Doc, LayoutLock, PanelId, SaveNodeInput, Scope, UiState } from './types';
+import { DOC_KEY, ensureFreshSeed } from './dataVersion';
 import {
   applyAddDay,
   applyDelete,
@@ -12,7 +13,6 @@ import {
   seedDoc,
 } from './trip';
 
-const DOC_KEY = 'anz-mobile-doc-v1';
 const UI_KEY = 'anz-mobile-ui-v1';
 
 const defaultUi = (): UiState => ({
@@ -48,6 +48,7 @@ function docLooksValid(value: Doc | null): value is Doc {
 }
 
 function loadDoc(): { doc: Doc; storageOk: boolean } {
+  ensureFreshSeed();
   const stored = readJson<Doc>(DOC_KEY);
   if (docLooksValid(stored)) return { doc: stored, storageOk: true };
   const doc = seedDoc();
