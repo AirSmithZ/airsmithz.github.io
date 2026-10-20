@@ -24,7 +24,7 @@ export const DIGEST_STOPS: DigestStop[] = [
     region: '悉尼',
     country: '澳大利亚',
     when: '2 月 14–15 日',
-    items: ['City Walk（悉尼歌剧院、悉尼大学、海德公园）', '2 月 15 日下午邦迪海滩'],
+    items: ['City Walk（悉尼歌剧院、顺路 Australia the Gift 买袋鼠蛋蛋、悉尼大学、海德公园）', '2 月 15 日下午邦迪海滩'],
   },
   {
     region: '墨尔本',
