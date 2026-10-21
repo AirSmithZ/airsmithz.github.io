@@ -1,8 +1,27 @@
-import { guideById, type GuideId } from '../guides';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { guideById, type GuideFigure, type GuideId } from '../guides';
 import type { PrepMode } from './PrepBoard';
 
 export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode; onClose: () => void }) {
   const guide = guideById(id);
+  const figures = useMemo(() => guide.steps.flatMap((step) => step.figures ?? []), [guide]);
+  const [open, setOpen] = useState<number | null>(null);
+  const closeZoom = useCallback(() => setOpen(null), []);
+  const shift = useCallback(
+    (delta: number) => {
+      setOpen((current) => {
+        if (current == null || figures.length < 2) return current;
+        return (current + delta + figures.length) % figures.length;
+      });
+    },
+    [figures.length],
+  );
+
+  useEffect(() => {
+    setOpen(null);
+  }, [id]);
+
   return (
     <section className={`prep prep--${mode} guide`} aria-label={guide.title} data-testid={`guide-${id}`}>
       <header className="prep__head">
@@ -31,7 +50,17 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
               ) : null}
               {step.figures?.map((figure) => (
                 <figure key={figure.src} className="guide-photo">
-                  <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+                  <button
+                    type="button"
+                    className="guide-photo__open"
+                    aria-label={`放大：${figure.alt}`}
+                    onClick={() => {
+                      const at = figures.findIndex((item) => item.src === figure.src);
+                      setOpen(at >= 0 ? at : 0);
+                    }}
+                  >
+                    <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+                  </button>
                   <figcaption>{figure.caption}</figcaption>
                 </figure>
               ))}
@@ -58,6 +87,105 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
           </li>
         ))}
       </ol>
+      {open != null && figures[open] ? (
+        <PhotoZoom figure={figures[open]} index={open} total={figures.length} onShift={shift} onClose={closeZoom} />
+      ) : null}
     </section>
+  );
+}
+
+function PhotoZoom({
+  figure,
+  index,
+  total,
+  onShift,
+  onClose,
+}: {
+  figure: GuideFigure;
+  index: number;
+  total: number;
+  onShift: (delta: number) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const startX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    const onCancel = (event: Event) => {
+      event.preventDefault();
+      onClose();
+    };
+    dialog.addEventListener('cancel', onCancel);
+    return () => {
+      dialog.removeEventListener('cancel', onCancel);
+      if (dialog.open) dialog.close();
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <dialog
+      ref={ref}
+      className="photo-zoom"
+      aria-label={figure.alt}
+      data-testid="photo-zoom"
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('button, img, p')) return;
+        onClose();
+      }}
+      onKeyDown={(event) => {
+        if (total < 2) return;
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          onShift(-1);
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          onShift(1);
+        }
+      }}
+      onPointerDown={(event) => {
+        if ((event.target as HTMLElement).closest('button')) {
+          startX.current = null;
+          return;
+        }
+        startX.current = event.clientX;
+      }}
+      onPointerUp={(event) => {
+        if (startX.current == null || total < 2) return;
+        const delta = event.clientX - startX.current;
+        startX.current = null;
+        if (Math.abs(delta) < 48) return;
+        onShift(delta < 0 ? 1 : -1);
+      }}
+    >
+      <div className="photo-zoom__bar">
+        {total > 1 ? (
+          <div className="photo-zoom__nav">
+            <button type="button" className="text-btn" onClick={() => onShift(-1)}>
+              上一张
+            </button>
+            <button type="button" className="text-btn" onClick={() => onShift(1)}>
+              下一张
+            </button>
+          </div>
+        ) : (
+          <span />
+        )}
+        <button type="button" className="text-btn" onClick={onClose}>
+          关闭
+        </button>
+      </div>
+      <div className="photo-zoom__frame">
+        <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+      </div>
+      <p>
+        {total > 1 ? `${index + 1} / ${total} · ` : ''}
+        {figure.caption}
+      </p>
+    </dialog>,
+    document.body,
   );
 }
