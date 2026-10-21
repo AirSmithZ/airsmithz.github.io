@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import maplibregl, { type FilterSpecification, type GeoJSONSource, type Map as MapLibreMap, type MapGeoJSONFeature } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { DayPlan, TripEdge } from '../types';
-import { categoryMeta } from '../types';
+import { nodeFace } from '../types';
 import { accuracyRing, buildMapModel, emptyCollection } from '../trip';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
@@ -121,7 +121,7 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
   onLegRef.current = setLeg;
 
   const model = useMemo(
-    () => buildMapModel(days, crossEdges, includeCross, selectedId, (category) => categoryMeta(category).color),
+    () => buildMapModel(days, crossEdges, includeCross, selectedId, (node) => nodeFace(node).color),
     [days, crossEdges, includeCross, selectedId],
   );
 

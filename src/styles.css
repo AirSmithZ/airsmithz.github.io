@@ -632,8 +632,7 @@ button {
 .trip-node__category {
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--node-color);
 }
 .trip-node__floor {

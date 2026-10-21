@@ -406,7 +406,7 @@ export function buildMapModel(
   crossEdges: TripEdge[],
   includeCross: boolean,
   selectedId: string | null,
-  colorOf: (category: string) => string,
+  colorOf: (node: TripNode) => string,
 ): MapModel {
   const nodes = days.flatMap((day) => day.nodes);
   const display = jitter(nodes);
@@ -415,7 +415,7 @@ export function buildMapModel(
   for (const node of nodes) {
     const spot = display.get(node.id);
     if (!spot) continue;
-    const color = colorOf(node.category);
+    const color = colorOf(node);
     located.push({ id: node.id, name: node.name, ...spot, color, optional: node.is_optional });
     pointFeatures.push({
       type: 'Feature',

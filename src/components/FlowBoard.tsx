@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type TransitionEvent } from 'react';
 import type { DayPlan, TripEdge, TripNode } from '../types';
-import { categoryMeta } from '../types';
+import { nodeFace } from '../types';
 import { edgeModeWord } from '../trip';
 import { capturePointer } from '../compat';
 
@@ -123,7 +123,7 @@ export function NodeCard({
   onOpenMap?: (id: string) => void;
 }) {
   const kind = variant ?? (compact ? 'compact' : 'flow');
-  const meta = categoryMeta(node.category);
+  const meta = nodeFace(node);
   const time =
     kind === 'compact' ? node.start_time : [node.start_time, node.end_time].filter(Boolean).join(' – ');
   const tone = {

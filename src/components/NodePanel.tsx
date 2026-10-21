@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CostQuote, Doc, EditorSession, NodeCategory, TransportMode, TripEdge, TripNode } from '../types';
-import { CATEGORIES, TRANSPORTS, categoryMeta } from '../types';
+import { CATEGORIES, TRANSPORTS, nodeFace } from '../types';
 import { formatMoney } from '../money';
 import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
 import { actions } from '../store';
@@ -426,8 +426,8 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
           <header className="detail-title">
             <h2>{node.name}</h2>
           </header>
-          <p className="card-kicker" style={{ color: categoryMeta(node.category).color }}>
-            {categoryMeta(node.category).label}
+          <p className="card-kicker" style={{ color: nodeFace(node).color }}>
+            {nodeFace(node).icon} {nodeFace(node).label}
             {node.is_optional ? ' · 可选' : ''} · D{day.day_index} {day.date.slice(5)} {day.region}
           </p>
           {(node.start_time || node.end_time) && (
