@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
+import { WeatherNotice } from './components/WeatherNotice';
 import { DigestBoard } from './components/DigestBoard';
 import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
@@ -392,6 +393,7 @@ export function PhoneApp() {
                 locked={Boolean(ui.editor)}
                 onPick={(index) => actions.setDay(index)}
               />
+              <WeatherNotice variant="phone" />
             </div>
           ) : ui.panel !== 'cost' ? (
             <div className="strip-row">

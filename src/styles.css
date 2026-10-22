@@ -393,6 +393,8 @@ button {
 }
 
 .strip-row {
+  position: relative;
+  z-index: 2;
   flex: none;
   display: flex;
   align-items: stretch;
@@ -485,7 +487,89 @@ button {
 .day-chip.is-on b { color: var(--accent); }
 .day-chip.is-on span { color: var(--text); }
 .day-chip.is-on small { color: var(--text-muted); }
+.day-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
 .day-chip:disabled { opacity: 0.4; }
+
+/* 天气缩在城市同一行，横排。日期和星期不动，卡片不加高。 */
+.day-chip.has-wx .day-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+.day-wx {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  line-height: 1;
+}
+.day-chip .day-wx__mark {
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.day-chip .day-wx__text,
+.day-chip .day-wx__temp {
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.day-chip.is-on .day-wx__text,
+.day-chip.is-on .day-wx__temp {
+  color: var(--text-dim);
+}
+
+.wx-alert {
+  position: relative;
+  flex: none;
+  align-self: center;
+  z-index: 3;
+}
+.wx-alert__btn {
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+}
+.wx-alert__btn.is-on,
+.wx-alert__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+.wx-alert__note {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 4;
+  width: min(260px, 72vw);
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
 
 .view {
   position: absolute;

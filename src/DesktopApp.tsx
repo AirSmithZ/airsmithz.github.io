@@ -3,6 +3,7 @@ import { capturePointer } from './compat';
 import { createPortal } from 'react-dom';
 import { actions, useTrip } from './store';
 import { DayStrip } from './components/DayStrip';
+import { WeatherNotice } from './components/WeatherNotice';
 import { DigestBoard } from './components/DigestBoard';
 import { ExpenseBoard } from './components/ExpenseBoard';
 import { FlowBoard } from './components/FlowBoard';
@@ -418,6 +419,7 @@ export function DesktopApp() {
               </p>
             )}
           </div>
+          {ui.scope === 'day' ? <WeatherNotice variant="desk" /> : null}
           <div className="desk__stage stage-view">
             <div className={`view view--front${stage === 'graph' ? '' : ' is-off'}`} data-testid="view-graph">
               {ui.scope === 'all' ? (
