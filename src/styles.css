@@ -255,6 +255,13 @@ button {
 
 .menu-wrap { position: relative; flex: none; }
 
+.header-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+
 .menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -393,8 +400,6 @@ button {
 }
 
 .strip-row {
-  position: relative;
-  z-index: 2;
   flex: none;
   display: flex;
   align-items: stretch;
@@ -536,18 +541,24 @@ button {
   z-index: 3;
 }
 .wx-alert__btn {
-  width: 32px;
-  height: 32px;
-  min-height: 0;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
   background: var(--accent-soft);
   color: var(--accent);
   font-family: var(--display);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1;
+}
+.is-short .wx-alert__btn,
+.is-land .wx-alert__btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
 }
 .wx-alert__btn.is-on,
 .wx-alert__btn:focus-visible {
@@ -558,8 +569,8 @@ button {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 4;
-  width: min(260px, 72vw);
+  z-index: 9;
+  width: min(260px, calc(100vw - 24px));
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;

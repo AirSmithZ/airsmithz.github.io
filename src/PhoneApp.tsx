@@ -237,15 +237,16 @@ export function PhoneApp() {
           </button>
         </div>
         </div>
-        <div className="menu-wrap">
-          <button
-            type="button"
-            className="icon-btn"
-            aria-expanded={menu}
-            onClick={() => setMenu((open) => !open)}
-          >
-            更多
-          </button>
+        <div className="header-end">
+          <div className="menu-wrap">
+            <button
+              type="button"
+              className="icon-btn"
+              aria-expanded={menu}
+              onClick={() => setMenu((open) => !open)}
+            >
+              更多
+            </button>
           {menu && (
             <div className="menu" role="menu">
               <p className="menu-note">
@@ -352,6 +353,8 @@ export function PhoneApp() {
               </button>
             </div>
           )}
+          </div>
+          <WeatherNotice variant="phone" />
         </div>
       </header>
 
@@ -393,7 +396,6 @@ export function PhoneApp() {
                 locked={Boolean(ui.editor)}
                 onPick={(index) => actions.setDay(index)}
               />
-              <WeatherNotice variant="phone" />
             </div>
           ) : ui.panel !== 'cost' ? (
             <div className="strip-row">

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import skies from '../data/dayWeather.json';
 
 const mock = Boolean((skies as { mock?: boolean }).mock);
@@ -12,14 +12,33 @@ export function weatherIsMock(): boolean {
 export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (variant !== 'phone' || !open) return;
-    const close = (event: KeyboardEvent) => {
+    const root = rootRef.current;
+    const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
+    const onPointer = (event: PointerEvent) => {
+      if (root && event.target instanceof Node && root.contains(event.target)) return;
+      setOpen(false);
+    };
+    const onScroll = () => setOpen(false);
+    const onSwipe = (event: TouchEvent) => {
+      if (root && event.target instanceof Node && root.contains(event.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onPointer, true);
+    document.addEventListener('scroll', onScroll, true);
+    document.addEventListener('touchmove', onSwipe, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onPointer, true);
+      document.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('touchmove', onSwipe, true);
+    };
   }, [open, variant]);
 
   if (!weatherIsMock()) return null;
@@ -36,7 +55,7 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
   }
 
   return (
-    <div className="wx-alert">
+    <div className="wx-alert" ref={rootRef}>
       <button
         type="button"
         className={`wx-alert__btn${open ? ' is-on' : ''}`}
