@@ -10,7 +10,7 @@ export function weatherIsMock(): boolean {
   return mock && note.length > 0;
 }
 
-/** 电脑端一条说明。手机端在页面顶部一枚「提醒」，点开才看到同一句话。不是示意天气时两者都不出现。 */
+/** 电脑端一条说明。手机端和顶部功能按钮同一排，一枚告警图标，点开才看到同一句话。不是示意天气时两者都不出现。 */
 export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
@@ -60,16 +60,29 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
     <div className="wx-alert" ref={rootRef}>
       <button
         type="button"
-        className={`icon-btn${open ? ' is-on' : ''}`}
+        className={`wx-alert__btn${open ? ' is-on' : ''}`}
         aria-expanded={open}
         aria-controls={noteId}
         aria-label="天气提醒"
         onClick={() => setOpen((value) => !value)}
       >
-        提醒
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 3.4 21.6 20.2H2.4L12 3.4Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinejoin="round"
+          />
+          <path d="M12 9.1v5.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="12" cy="17.15" r="0.95" fill="currentColor" />
+        </svg>
       </button>
       {open ? (
         <p id={noteId} className="wx-alert__note" role="status">
+          <span className="wx-alert__flag" aria-hidden="true">
+            注意
+          </span>
           {note}
         </p>
       ) : null}

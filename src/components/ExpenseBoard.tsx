@@ -38,8 +38,8 @@ interface ExpenseSheetProps {
 }
 
 function scrollHost(root: HTMLElement | null): HTMLElement | null {
-  const parent = root?.parentElement;
-  if (parent?.classList.contains('day-pager__page')) return parent;
+  const page = root?.closest<HTMLElement>('.day-pager__page');
+  if (page) return page;
   return root;
 }
 

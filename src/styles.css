@@ -55,6 +55,7 @@ body,
   margin: 0;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior-x: none;
   background: var(--bg-deep);
   color: var(--text);
   font-family: var(--sans);
@@ -125,6 +126,12 @@ button {
 
 .header-scroll { display: contents; }
 
+.brand { order: 1; }
+.seg { order: 2; }
+.wx-alert { order: 3; }
+.scope { order: 4; }
+.header-end { order: 5; }
+
 .is-land .header {
   flex-wrap: nowrap;
   padding-block: 6px;
@@ -149,6 +156,19 @@ button {
 .brand {
   margin-right: auto;
   min-width: 0;
+}
+/* 竖屏标题让出右侧，告警图标才能和流程、地图、开销留在同一排。 */
+.is-port .brand {
+  flex: 1 1 0;
+  margin-right: 0;
+  min-width: 6.6rem;
+}
+.is-port .brand h1 { white-space: nowrap; }
+.is-port .brand small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .is-land .brand { flex: none; margin-right: 4px; }
 .is-short .brand small,
@@ -610,29 +630,79 @@ button {
   z-index: 7;
   flex: none;
   display: flex;
-  justify-content: flex-end;
-  padding: 6px 12px 0;
+  align-items: center;
+}
+.wx-alert__btn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #ffb020 72%, #ff5c4a);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255, 176, 32, 0.34), transparent 68%),
+    #2a1a0c;
+  color: #ffc14d;
+  box-shadow: inset 0 0 0 1px rgba(255, 196, 92, 0.16);
+  animation: wx-alarm 2.4s ease-in-out infinite;
+}
+.wx-alert__btn svg {
+  width: 18px;
+  height: 18px;
+}
+.wx-alert__btn.is-on {
+  animation: none;
+  background: #ffb020;
+  color: #1a1206;
+  border-color: #ffe0a3;
+}
+.is-short .wx-alert__btn,
+.is-land .wx-alert__btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 10px;
+}
+.is-short .wx-alert__btn svg,
+.is-land .wx-alert__btn svg {
+  width: 16px;
+  height: 16px;
 }
 .wx-alert__note {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   z-index: 9;
-  width: min(260px, calc(100vw - 24px));
+  width: min(280px, calc(100vw - 24px));
   margin: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow);
-  color: var(--text-muted);
+  border: 1px solid color-mix(in srgb, #ffb020 58%, var(--border));
+  background:
+    linear-gradient(180deg, rgba(255, 176, 32, 0.16), transparent 42%),
+    #1c140c;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+  color: #f3e6d0;
   font-size: 12px;
   line-height: 1.55;
 }
-.is-port .wx-alert__note,
-.is-land .wx-alert__note {
-  right: 0;
-  width: min(280px, calc(100vw - 24px));
+.wx-alert__flag {
+  display: block;
+  margin-bottom: 4px;
+  color: #ffc14d;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+@keyframes wx-alarm {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 176, 32, 0.2); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wx-alert__btn { animation: none; }
 }
 
 .view {
@@ -663,7 +733,8 @@ button {
 }
 
 /* 手机单日流程图、单日开销：三页横排跟手翻。每一页自己上下滚。总行程和地图不走这里。
-   手势进行中由脚本分轴，并在按下后立刻吃掉触摸滚动。若仍交给浏览器 pan-y，开头的上下抖动会把左右滑判成滚动。 */
+   手势进行中由脚本分轴，并在按下后立刻吃掉触摸滚动。若仍交给浏览器 pan-y，开头的上下抖动会把左右滑判成滚动。
+   拉过顶或底时，内层 sheet 跟着手指露一段空隙，松手弹回。 */
 .day-pager {
   position: absolute;
   inset: 0;
@@ -682,11 +753,18 @@ button {
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   touch-action: pan-y;
   box-sizing: border-box;
 }
-.day-pager__page > .expense {
+.day-pager__sheet {
+  min-height: 100%;
+}
+.day-pager--gesture .day-pager__sheet {
+  will-change: transform;
+}
+.day-pager__sheet > .expense {
   position: relative;
   inset: auto;
   box-sizing: border-box;
@@ -1040,6 +1118,10 @@ button {
 }
 .tips li,
 .quote-read li { margin: 8px 0; }
+.tips a {
+  color: var(--accent, #8eb4ff);
+  word-break: break-all;
+}
 .node-photos { margin: 10px 0 4px; }
 .node-photos .fine { margin-top: 8px; }
 .quote-read span,
@@ -2022,6 +2104,33 @@ button {
   max-height: 100%;
   margin: 0;
   overflow: auto;
+}
+/* 右滑关掉竖屏面板时，卡片跟手，遮罩跟着让开，底下的行程露出来。 */
+.phone-layer.is-swipe {
+  background: rgba(0, 0, 0, calc(0.45 * var(--swipe-fade, 1)));
+}
+.phone-layer--sheet.is-swipe {
+  background: rgba(7, 11, 16, calc(0.92 * var(--swipe-fade, 1)));
+}
+.phone-layer.is-swipe:not(.is-dragging) {
+  transition: background-color 220ms ease;
+}
+.phone-layer.is-dragging {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.phone-layer.is-swipe .detail-modal,
+.phone-layer.is-swipe .digest--port,
+.phone-layer.is-swipe .prep--port,
+.phone-layer.is-swipe .modal {
+  animation: none;
+}
+.phone-layer.is-dragging .detail-modal,
+.phone-layer.is-dragging .digest--port,
+.phone-layer.is-dragging .prep--port {
+  box-shadow:
+    -16px 0 32px rgba(0, 0, 0, 0.28),
+    var(--shadow);
 }
 .modal-back {
   position: fixed;

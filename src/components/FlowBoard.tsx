@@ -3,6 +3,7 @@ import type { DayPlan, TripEdge, TripNode } from '../types';
 import { nodeFace } from '../types';
 import { edgeModeWord, stayParts } from '../trip';
 import { capturePointer } from '../compat';
+import { edgeRubber, fingerVelocity, ListGlide, TRACK_EASE } from '../listGlide';
 import { skyFor } from '../sky';
 import { SkyLine } from './SkyLine';
 
@@ -10,11 +11,11 @@ const SWIPE_MIN = 56;
 const SWIPE_RATIO = 0.33;
 const FLICK_SPEED = 0.45;
 const FLICK_MIN = 24;
-const RUBBER = 0.35;
 
 /**
  * 左右切日期优先于刚按下时的上下抖动。
  * 竖向先扣掉一小段拇指噪声；没分出胜负前页面先不动，避免浏览器把左右滑吃成滚动。
+ * 锁上竖向之后从锁定点重新跟手，不把这段噪声一次性跳进列表。
  * 锁错了也还能改：横滑还短、后来明显向下，就改回滚动；竖滑还没走远、横滑赶上来，就改切日期。
  */
 function daySwipeAxis(dx: number, dy: number, current: 'x' | 'y' | null): 'x' | 'y' | null {
@@ -31,7 +32,7 @@ function daySwipeAxis(dx: number, dy: number, current: 'x' | 'y' | null): 'x' | 
   }
   if (ax < 10 && ay < 10) return null;
   if (ax >= 16 && ax > ayIntent) return 'x';
-  if (ay >= 32 && ay > ax * 1.15) return 'y';
+  if (ay >= 18 && ay > ax * 1.15) return 'y';
   return null;
 }
 
@@ -222,64 +223,22 @@ export function FlowBoard({
     if (!el || !daySwipe) return;
 
     const pointers = new Set<number>();
+    const glide = new ListGlide();
     let tracking: {
       id: number;
       x: number;
       y: number;
       axis: 'x' | 'y' | null;
-      lastX: number;
-      lastY: number;
-      lastT: number;
-      velocity: number;
-      velocityY: number;
+      xSamples: { t: number; p: number }[];
       page: HTMLElement | null;
       scrollTop: number;
     } | null = null;
     let suppressClick = false;
-    let coast = 0;
-
-    const stopCoast = () => {
-      if (!coast) return;
-      cancelAnimationFrame(coast);
-      coast = 0;
-    };
-
-    const coastScroll = (page: HTMLElement, velocity: number) => {
-      stopCoast();
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (reduce || Math.abs(velocity) < 0.12) return;
-      let speed = velocity;
-      let last = performance.now();
-      const step = (now: number) => {
-        if (!page.isConnected) {
-          coast = 0;
-          return;
-        }
-        const dt = Math.min(34, now - last);
-        last = now;
-        const max = Math.max(0, page.scrollHeight - page.clientHeight);
-        const next = Math.min(max, Math.max(0, page.scrollTop - speed * dt));
-        page.scrollTop = next;
-        speed *= 0.92 ** (dt / 16);
-        if (Math.abs(speed) < 0.02 || next <= 0 || next >= max) {
-          coast = 0;
-          return;
-        }
-        coast = requestAnimationFrame(step);
-      };
-      coast = requestAnimationFrame(step);
-    };
 
     const stopWindow = () => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       window.removeEventListener('pointercancel', onCancel);
-    };
-
-    const shownDx = (dx: number, index: number, count: number) => {
-      if (dx > 0 && index <= 0) return dx * RUBBER;
-      if (dx < 0 && index >= count - 1) return dx * RUBBER;
-      return dx;
     };
 
     const settle = (next: number | null) => {
@@ -300,21 +259,18 @@ export function FlowBoard({
         tracking = null;
         phase.current = 'idle';
         setDrag({ x: 0, animate: true });
+        glide.release();
         return;
       }
-      stopCoast();
       const node = event.target instanceof Element ? event.target : null;
       const page = node?.closest<HTMLElement>('.day-pager__page') ?? null;
+      glide.hold(page);
       tracking = {
         id: event.pointerId,
         x: event.clientX,
         y: event.clientY,
         axis: null,
-        lastX: event.clientX,
-        lastY: event.clientY,
-        lastT: performance.now(),
-        velocity: 0,
-        velocityY: 0,
+        xSamples: [{ t: performance.now(), p: event.clientX }],
         page,
         scrollTop: page?.scrollTop ?? 0,
       };
@@ -329,6 +285,7 @@ export function FlowBoard({
       const dy = event.clientY - tracking.y;
       const nextAxis = daySwipeAxis(dx, dy, tracking.axis);
       if (nextAxis === 'x' && tracking.axis !== 'x') {
+        glide.drop();
         if (tracking.page) tracking.page.scrollTop = tracking.scrollTop;
         tracking.axis = 'x';
         suppressClick = true;
@@ -343,23 +300,20 @@ export function FlowBoard({
           phase.current = 'idle';
           setDrag({ x: 0, animate: false });
         }
+        glide.hold(tracking.page);
+        glide.arm(event.clientY);
       }
       if (!tracking.axis) return;
-      const now = performance.now();
-      const dt = now - tracking.lastT;
-      if (dt > 0) {
-        tracking.velocity = (event.clientX - tracking.lastX) / dt;
-        tracking.velocityY = (event.clientY - tracking.lastY) / dt;
-      }
-      tracking.lastX = event.clientX;
-      tracking.lastY = event.clientY;
-      tracking.lastT = now;
       if (tracking.axis === 'y') {
-        if (tracking.page) tracking.page.scrollTop = tracking.scrollTop - dy;
+        glide.dragTo(event.clientY);
         return;
       }
-      const { dayIndex: index, dayCount } = live.current;
-      setDrag({ x: shownDx(dx, index, dayCount), animate: false });
+      const now = performance.now();
+      tracking.xSamples.push({ t: now, p: event.clientX });
+      const cutoff = now - 120;
+      while (tracking.xSamples.length > 3 && tracking.xSamples[0].t < cutoff) tracking.xSamples.shift();
+      const { dayIndex: index, dayCount, width: pageWidth } = live.current;
+      setDrag({ x: edgeRubber(dx, index, dayCount, pageWidth), animate: false });
     };
 
     const onUp = (event: PointerEvent) => {
@@ -370,8 +324,8 @@ export function FlowBoard({
       }
       const dx = event.clientX - tracking.x;
       const dy = event.clientY - tracking.y;
-      const velocity = tracking.velocity;
-      const velocityY = tracking.velocityY;
+      tracking.xSamples.push({ t: performance.now(), p: event.clientX });
+      const velocity = fingerVelocity(tracking.xSamples);
       const page = tracking.page;
       const savedTop = tracking.scrollTop;
       const axis = daySwipeAxis(dx, dy, tracking.axis);
@@ -379,12 +333,14 @@ export function FlowBoard({
       if (pointers.size === 0) stopWindow();
       if (axis === 'y') {
         suppressClick = true;
-        if (page) coastScroll(page, velocityY);
+        glide.dragTo(event.clientY);
+        glide.release();
         phase.current = 'idle';
         return;
       }
       if (page) page.scrollTop = savedTop;
       if (axis !== 'x') {
+        glide.release();
         phase.current = 'idle';
         return;
       }
@@ -410,7 +366,7 @@ export function FlowBoard({
         return;
       }
       phase.current = 'anim';
-      const timer = window.setTimeout(() => settle(canGo ? next : null), 260);
+      const timer = window.setTimeout(() => settle(canGo ? next : null), 360);
       settleRef.current = () => window.clearTimeout(timer);
       setDrag({ x: canGo ? (dir > 0 ? -pageWidth : pageWidth) : 0, animate: true });
     };
@@ -421,7 +377,10 @@ export function FlowBoard({
         const horizontal = tracking.axis === 'x';
         if (horizontal) suppressClick = true;
         tracking = null;
-        if (horizontal) setDrag({ x: 0, animate: true });
+        if (horizontal) {
+          glide.drop();
+          setDrag({ x: 0, animate: true });
+        } else glide.release();
       }
       if (pointers.size === 0) {
         stopWindow();
@@ -449,7 +408,7 @@ export function FlowBoard({
       el.removeEventListener('touchmove', onTouchMove, true);
       el.removeEventListener('click', onClick, true);
       stopWindow();
-      stopCoast();
+      glide.dispose();
       settleRef.current?.();
       settleRef.current = null;
     };
@@ -464,6 +423,10 @@ export function FlowBoard({
     const el = canFind
       ? board.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(selectedId as string)}"]`)
       : null;
+    if (dayChanged && scope === 'day') {
+      const sheet = board.querySelector(':scope > .day-pager__sheet');
+      if (sheet instanceof HTMLElement) sheet.style.transform = '';
+    }
     if (!el) {
       if (dayChanged && scope === 'day') board.scrollTop = 0;
       return;
@@ -524,7 +487,7 @@ export function FlowBoard({
             className="day-pager__track"
             style={{
               transform: `translate3d(${x}px, 0, 0)`,
-              transition: drag?.animate ? 'transform 180ms ease' : 'none',
+              transition: drag?.animate ? TRACK_EASE : 'none',
             }}
             onTransitionEnd={onTrackEnd}
           >
@@ -535,7 +498,9 @@ export function FlowBoard({
                 ref={item.date === day.date ? pageRef : undefined}
                 aria-hidden={item.date !== day.date}
               >
-                <DayFlow day={item} crossEdges={crossEdges} selectedId={selectedId} onSelect={onSelect} />
+                <div className="day-pager__sheet">
+                  <DayFlow day={item} crossEdges={crossEdges} selectedId={selectedId} onSelect={onSelect} />
+                </div>
               </div>
             ))}
           </div>

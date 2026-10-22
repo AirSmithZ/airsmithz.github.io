@@ -11,6 +11,7 @@ import { GuideBoard } from './components/GuideBoard';
 import { isGuideId, GUIDES, type GuideId } from './guides';
 import { isPrepKind, PREP_META, type PrepKind } from './prep';
 import { readViewportBox } from './compat';
+import { usePanelSwipe, usePortraitEdgeGuard } from './portraitGestures';
 import type { PanelId, Scope, TripEdge } from './types';
 
 const TripMap = lazy(() => import('./components/TripMap').then((mod) => ({ default: mod.TripMap })));
@@ -63,6 +64,7 @@ function PhoneDialog({
   label,
   onClose,
   sheet = false,
+  swipeClose = false,
   children,
 }: {
   open: boolean;
@@ -70,9 +72,13 @@ function PhoneDialog({
   onClose: () => void;
   /** 竖屏长内容：铺满遮罩并在卡片内滚动，不压住页头。 */
   sheet?: boolean;
+  /** 向右滑关闭。竖滑仍走面板里原来的滚动。 */
+  swipeClose?: boolean;
   children: ReactNode;
 }) {
+  const layerRef = useRef<HTMLDivElement>(null);
   const [sheetTop, setSheetTop] = useState(12);
+  usePanelSwipe(layerRef, open && swipeClose, onClose);
   useEffect(() => {
     if (!open || !sheet) return;
     const measure = () => {
@@ -89,6 +95,7 @@ function PhoneDialog({
   if (!open) return null;
   return (
     <div
+      ref={layerRef}
       className={`phone-layer${sheet ? ' phone-layer--sheet' : ''}`}
       style={sheet ? { paddingTop: sheetTop } : undefined}
       role="presentation"
@@ -135,6 +142,7 @@ export function PhoneApp() {
   const wantLand = ui.layoutLock === 'landscape' || (ui.layoutLock === 'auto' && box.landscape);
   const landBlocked = wantLand && box.w < 680;
   const land = wantLand && !landBlocked;
+  usePortraitEdgeGuard(!land);
   const short = box.h < 460;
   const day = doc.itinerary.days[ui.dayIndex];
   const first = doc.itinerary.days[0];
@@ -183,7 +191,6 @@ export function PhoneApp() {
     <div
       className={`shell${land ? ' is-land' : ' is-port'}${short ? ' is-short' : ''}`}
     >
-      <WeatherNotice variant="phone" />
       <header className="header" ref={headerRef}>
         <div className="header-scroll">
         <div className="brand">
@@ -238,6 +245,7 @@ export function PhoneApp() {
           </button>
         </div>
         </div>
+        <WeatherNotice variant="phone" />
         <div className="header-end">
           <div className="menu-wrap">
             <button
@@ -457,12 +465,13 @@ export function PhoneApp() {
 
       {menu ? <button type="button" className="menu-dismiss" aria-label="关闭菜单" onClick={() => setMenu(false)} /> : null}
 
-      <PhoneDialog sheet open={!land && side === 'digest'} label="行程汇总" onClose={() => setSide(null)}>
+      <PhoneDialog sheet swipeClose open={!land && side === 'digest'} label="行程汇总" onClose={() => setSide(null)}>
         <DigestBoard mode="port" onClose={() => setSide(null)} />
       </PhoneDialog>
 
       <PhoneDialog
         sheet
+        swipeClose
         open={!land && isPrepKind(side)}
         label={isPrepKind(side) ? PREP_META[side].title : '准备'}
         onClose={() => setSide(null)}
@@ -470,11 +479,11 @@ export function PhoneApp() {
         {isPrepKind(side) ? <PrepBoard kind={side} mode="port" onClose={() => setSide(null)} /> : null}
       </PhoneDialog>
 
-      <PhoneDialog sheet open={!land && isGuideId(side)} label={isGuideId(side) ? GUIDES.find((item) => item.id === side)?.title ?? '流程' : '流程'} onClose={() => setSide(null)}>
+      <PhoneDialog sheet swipeClose open={!land && isGuideId(side)} label={isGuideId(side) ? GUIDES.find((item) => item.id === side)?.title ?? '流程' : '流程'} onClose={() => setSide(null)}>
         {isGuideId(side) ? <GuideBoard id={side} mode="port" onClose={() => setSide(null)} /> : null}
       </PhoneDialog>
 
-      <PhoneDialog open={modalOpen} label="节点详情" onClose={hideModal}>
+      <PhoneDialog swipeClose open={modalOpen} label="节点详情" onClose={hideModal}>
         <div className="detail-modal">
           {nodePanel}
         </div>

@@ -82,8 +82,8 @@ export const DIGEST_STOPS: DigestStop[] = [
     when: '2 月 24 日',
     items: [
       { icon: '🎯', text: 'Real Guns' },
-      { icon: '🌳', text: '瓦纳卡巨杉' },
-      { icon: '🌳', text: '瓦纳卡孤独的树' },
+      { icon: '🌲', text: '瓦纳卡巨杉' },
+      { icon: '🌲', text: '瓦纳卡孤独的树' },
       { icon: '🪂', text: '跳伞' },
       { icon: '🏛', text: '玩具博物馆' },
       { icon: '🚶', text: '箭镇' },

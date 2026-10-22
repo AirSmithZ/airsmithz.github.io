@@ -9,6 +9,19 @@ import { Check } from './Check';
 import { usePhotoZoomGesture } from './photoZoomGesture';
 import { SkeletonImage } from './Skeleton';
 
+function linkify(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, index) =>
+    part.startsWith('http') ? (
+      <a key={index} href={part} target="_blank" rel="noopener noreferrer">
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 interface FormState {
   name: string;
   category: NodeCategory;
@@ -514,7 +527,7 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
           {(node.tips ?? []).length > 0 && (
             <ul className="tips">
               {(node.tips ?? []).map((tip) => (
-                <li key={tip}>{tip}</li>
+                <li key={tip}>{linkify(tip)}</li>
               ))}
             </ul>
           )}
