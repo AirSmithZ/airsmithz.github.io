@@ -119,12 +119,18 @@ function PhotoZoom({
     const dialog = ref.current;
     if (!dialog) return;
     if (!dialog.open) dialog.showModal();
+    const pin = () => {
+      if (document.activeElement !== dialog) dialog.focus({ preventScroll: true });
+    };
+    pin();
+    const frame = requestAnimationFrame(pin);
     const onCancel = (event: Event) => {
       event.preventDefault();
       onClose();
     };
     dialog.addEventListener('cancel', onCancel);
     return () => {
+      cancelAnimationFrame(frame);
       dialog.removeEventListener('cancel', onCancel);
       if (dialog.open) dialog.close();
     };
@@ -136,6 +142,8 @@ function PhotoZoom({
       className="photo-zoom"
       aria-label={figure.alt}
       data-testid="photo-zoom"
+      tabIndex={-1}
+      autoFocus
       onClick={(event) => {
         const target = event.target as HTMLElement;
         if (target.closest('button, img, p')) return;
