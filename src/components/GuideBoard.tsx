@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { guideById, type GuideFigure, type GuideId } from '../guides';
 import type { PrepMode } from './PrepBoard';
+import { usePhotoZoomGesture } from './photoZoomGesture';
 import { SkeletonImage } from './Skeleton';
 
 export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode; onClose: () => void }) {
@@ -113,7 +114,7 @@ function PhotoZoom({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const startX = useRef<number | null>(null);
+  const gesture = usePhotoZoomGesture(total, onShift, onClose);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -144,11 +145,7 @@ function PhotoZoom({
       data-testid="photo-zoom"
       tabIndex={-1}
       autoFocus
-      onClick={(event) => {
-        const target = event.target as HTMLElement;
-        if (target.closest('button, img, p')) return;
-        onClose();
-      }}
+      onClick={gesture.onClick}
       onKeyDown={(event) => {
         if (total < 2) return;
         if (event.key === 'ArrowLeft') {
@@ -159,20 +156,8 @@ function PhotoZoom({
           onShift(1);
         }
       }}
-      onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest('button')) {
-          startX.current = null;
-          return;
-        }
-        startX.current = event.clientX;
-      }}
-      onPointerUp={(event) => {
-        if (startX.current == null || total < 2) return;
-        const delta = event.clientX - startX.current;
-        startX.current = null;
-        if (Math.abs(delta) < 48) return;
-        onShift(delta < 0 ? 1 : -1);
-      }}
+      onPointerDown={gesture.onPointerDown}
+      onPointerUp={gesture.onPointerUp}
     >
       <div className="photo-zoom__bar">
         {total > 1 ? (

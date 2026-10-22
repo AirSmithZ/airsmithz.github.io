@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { CostQuote, Doc, EditorSession, NodeCategory, TransportMode, TripEdge, TripNode } from '../types';
-import { CATEGORIES, TRANSPORTS, nodeFace } from '../types';
+import { CATEGORIES, PLAY_KINDS, TRANSPORTS, nodeFace } from '../types';
 import { formatMoney } from '../money';
 import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
 import { actions } from '../store';
 import { Check } from './Check';
+import { usePhotoZoomGesture } from './photoZoomGesture';
 import { SkeletonImage } from './Skeleton';
 
 interface FormState {
   name: string;
   category: NodeCategory;
+  play: string;
   start: string;
   end: string;
   optional: boolean;
@@ -67,6 +69,7 @@ function buildForm(doc: Doc, editor: EditorSession): FormState | null {
   return {
     name: base.name,
     category: base.category,
+    play: base.play ?? '',
     start: toTime(base.start_time),
     end: toTime(base.end_time),
     optional: base.is_optional,
@@ -156,6 +159,7 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
       id: editor.nodeId,
       name: form.name.trim(),
       category: form.category,
+      play: form.category === 'attraction' && form.play ? form.play : undefined,
       start_time: form.start || undefined,
       end_time: form.end || undefined,
       is_optional: form.optional,
@@ -167,6 +171,7 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
       region: form.region.trim() || day.region,
       cost_quotes: form.quotes,
     };
+    if (!nextNode.play) delete nextNode.play;
     const prev = previousInDay(day, editor.mode === 'create' ? null : editor.nodeId);
     let edge: TripEdge | null = null;
     if (form.edgeId) {
@@ -235,7 +240,10 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
               <span>类别</span>
               <select
                 value={form.category}
-                onChange={(event) => patch({ category: event.target.value as NodeCategory })}
+                onChange={(event) => {
+                  const category = event.target.value as NodeCategory;
+                  patch({ category, play: category === 'attraction' ? form.play : '' });
+                }}
               >
                 {CATEGORIES.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -248,6 +256,19 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
               可选，不去也行
             </Check>
           </div>
+          {form.category === 'attraction' && (
+            <label className="field">
+              <span>这一项</span>
+              <select value={form.play} onChange={(event) => patch({ play: event.target.value })}>
+                <option value="">还没分</option>
+                {PLAY_KINDS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="row2">
             <label className="field">
               <span>开始</span>
@@ -598,7 +619,7 @@ function PhotoZoom({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const startX = useRef<number | null>(null);
+  const gesture = usePhotoZoomGesture(total, onShift, onClose);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -628,11 +649,7 @@ function PhotoZoom({
       aria-label={photo.alt}
       tabIndex={-1}
       autoFocus
-      onClick={(event) => {
-        const target = event.target as HTMLElement;
-        if (target.closest('button, img, p')) return;
-        onClose();
-      }}
+      onClick={gesture.onClick}
       onKeyDown={(event) => {
         if (total < 2) return;
         if (event.key === 'ArrowLeft') {
@@ -643,20 +660,8 @@ function PhotoZoom({
           onShift(1);
         }
       }}
-      onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest('button')) {
-          startX.current = null;
-          return;
-        }
-        startX.current = event.clientX;
-      }}
-      onPointerUp={(event) => {
-        if (startX.current == null || total < 2) return;
-        const delta = event.clientX - startX.current;
-        startX.current = null;
-        if (Math.abs(delta) < 48) return;
-        onShift(delta < 0 ? 1 : -1);
-      }}
+      onPointerDown={gesture.onPointerDown}
+      onPointerUp={gesture.onPointerUp}
     >
       <div className="photo-zoom__bar">
         {total > 1 ? (

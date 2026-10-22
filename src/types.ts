@@ -46,6 +46,8 @@ export interface TripNode {
   coord_source?: string;
   scene_group?: string;
   place_id?: string;
+  /** 游玩下面的种类。地标、机场、住宿不使用。 */
+  play?: string;
   evidence_refs?: unknown[];
 }
 
@@ -161,83 +163,32 @@ export function categoryMeta(category: string): { label: string; color: string; 
   };
 }
 
-/** 游玩按活动本身上色。深色面板上用得开的颜色，和机场、住宿、交通的原色错开。 */
+/** 游玩按活动本身上色。地标不在这里：加油站和整点用类别「地标」，不按名字上色。 */
 export const PLAY_KINDS: { id: string; label: string; color: string; glow: string; icon: string }[] = [
+  { id: 'city', label: '城区', color: '#c4b5fd', glow: 'rgba(196,181,253,0.42)', icon: '🚶' },
+  { id: 'nature', label: '自然', color: '#8fce6a', glow: 'rgba(143,206,106,0.4)', icon: '🏞' },
+  { id: 'venue', label: '场馆', color: '#f0a202', glow: 'rgba(240,162,2,0.4)', icon: '🏛' },
+  { id: 'animal', label: '动物', color: '#34d399', glow: 'rgba(52,211,153,0.45)', icon: '🦘' },
+  { id: 'boat', label: '船', color: '#49b6ff', glow: 'rgba(73,182,255,0.45)', icon: '⛴' },
+  { id: 'helicopter', label: '直升机', color: '#7ec8ff', glow: 'rgba(126,200,255,0.45)', icon: '🚁' },
+  { id: 'flight', label: '景观飞机', color: '#d7b0ff', glow: 'rgba(215,176,255,0.42)', icon: '🛩' },
   { id: 'dive', label: '潜水', color: '#2ad4c8', glow: 'rgba(42,212,200,0.45)', icon: '🤿' },
   { id: 'skydive', label: '跳伞', color: '#ff4f8b', glow: 'rgba(255,79,139,0.45)', icon: '🪂' },
-  { id: 'citywalk', label: 'Citywalk', color: '#c4b5fd', glow: 'rgba(196,181,253,0.42)', icon: '🚶' },
   { id: 'shoot', label: '射击', color: '#ff5a36', glow: 'rgba(255,90,54,0.45)', icon: '🎯' },
-  { id: 'speedboat', label: '快艇', color: '#49b6ff', glow: 'rgba(73,182,255,0.45)', icon: '🚤' },
-  { id: 'shop', label: '购物', color: '#f0c14d', glow: 'rgba(240,193,77,0.4)', icon: '🛍' },
+  { id: 'speedboat', label: '快艇', color: '#5ee0ff', glow: 'rgba(94,224,255,0.4)', icon: '🚤' },
   { id: 'cable', label: '缆车', color: '#6fce7a', glow: 'rgba(111,206,122,0.4)', icon: '🚠' },
   { id: 'luge', label: '滑板', color: '#ff9e2c', glow: 'rgba(255,158,44,0.45)', icon: '🛷' },
-  { id: 'zoo', label: '动物园', color: '#34d399', glow: 'rgba(52,211,153,0.45)', icon: '🦘' },
-  { id: 'view', label: '观景', color: '#d7e27a', glow: 'rgba(215,226,122,0.35)', icon: '🏞' },
+  { id: 'market', label: '集市', color: '#f0c14d', glow: 'rgba(240,193,77,0.4)', icon: '🧺' },
+  { id: 'shop', label: '商店', color: '#e8a87c', glow: 'rgba(232,168,124,0.4)', icon: '🛍' },
+  { id: 'stars', label: '银河', color: '#9eb6ff', glow: 'rgba(158,182,255,0.45)', icon: '🌌' },
 ];
 
-const PLAY_BY_NAME: Record<string, string> = {
-  潜水: 'dive',
-  瓦纳卡跳伞: 'skydive',
-  'City Walk和替补前一天行程取消': 'citywalk',
-  悉尼歌剧院: 'citywalk',
-  海德公园: 'citywalk',
-  悉尼大学主校区: 'citywalk',
-  弗林德斯火车站: 'citywalk',
-  圣保罗大教堂: 'citywalk',
-  皇家拱廊: 'citywalk',
-  维多利亚图书馆: 'citywalk',
-  大卫公园: 'citywalk',
-  植物园: 'citywalk',
-  皇后镇公园: 'citywalk',
-  'Real Guns': 'shoot',
-  鲨鱼快艇: 'speedboat',
-  'Australia the Gift': 'shop',
-  萨拉曼卡集市: 'shop',
-  'Riverside Market': 'shop',
-  'Westfield Riccarton': 'shop',
-  山顶缆车中环站: 'cable',
-  天际线缆车: 'cable',
-  天际线滑板: 'luge',
-  星光大道: 'view',
-  太平山顶: 'view',
-  凯恩斯潟湖: 'view',
-  太阳恋人号: 'view',
-  摩尔礁: 'view',
-  大堡礁直升机观光: 'view',
-  金字塔山: 'view',
-  袋鼠谷: 'zoo',
-  帕罗尼拉公园: 'view',
-  米拉米拉瀑布: 'view',
-  邦迪海滩: 'view',
-  吉布森石阶: 'view',
-  十二使徒: 'view',
-  'Great Ocean Road Wildlife Park': 'zoo',
-  洛克阿德大峡谷: 'view',
-  'Pennicott Wilderness Journeys': 'view',
-  亚瑟港: 'view',
-  皮勒角: 'view',
-  '3 小时巡航': 'view',
-  鹰颈峡: 'view',
-  'Tasmanian Devil Unzoo': 'zoo',
-  伯克斯山口: 'view',
-  好牧羊人教堂: 'view',
-  普卡基: 'view',
-  特威泽尔: 'view',
-  奥马鲁阿玛: 'view',
-  林迪斯山口: 'view',
-  塔拉斯: 'view',
-  卡德罗纳: 'view',
-  皇冠山脉: 'view',
-  皇冠山脉鞍部: 'view',
-  箭镇: 'view',
-  几维鸟园: 'zoo',
-  'Milford Sound Scenic Flights Hangar': 'view',
-  峡湾游船: 'view',
-};
-
-export function nodeFace(node: { name: string; category: string }): { label: string; color: string; glow: string; icon: string } {
-  const kind = PLAY_KINDS.find((item) => item.id === PLAY_BY_NAME[node.name]);
-  return kind ?? categoryMeta(node.category);
+export function nodeFace(node: { category: string; play?: string }): { label: string; color: string; glow: string; icon: string } {
+  if (node.category === 'attraction') {
+    const kind = PLAY_KINDS.find((item) => item.id === node.play);
+    if (kind) return kind;
+  }
+  return categoryMeta(node.category);
 }
 
 export function transportLabel(mode: string): string {
