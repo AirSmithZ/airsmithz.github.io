@@ -1,8 +1,11 @@
+import playCatalog from './data/playKinds.json';
+
 export type NodeCategory =
   | 'airport'
   | 'hotel'
   | 'restaurant'
   | 'snack'
+  | 'factory'
   | 'attraction'
   | 'landmark'
   | 'transit';
@@ -32,6 +35,9 @@ export interface TripNode {
   start_time?: string;
   end_time?: string;
   duration_minutes?: number;
+  /** clock 钟点相减，stated 说明里写的，usual 常见时长，skip 不估。 */
+  dwell_basis?: 'clock' | 'stated' | 'usual' | 'skip';
+  dwell_note?: string;
   is_optional: boolean;
   tips?: string[];
   /** 详情里跟在说明后面的图。src 相对站点根目录，不含开头的斜杠。 */
@@ -136,13 +142,14 @@ export interface SaveNodeInput {
 }
 
 export const CATEGORIES: { id: NodeCategory; label: string; color: string; glow: string; icon: string }[] = [
-  { id: 'airport', label: '机场', color: '#2d8f6f', glow: 'rgba(45,143,111,0.45)', icon: '✈' },
+  { id: 'airport', label: '机场', color: '#2d8f6f', glow: 'rgba(45,143,111,0.45)', icon: '✈️' },
   { id: 'hotel', label: '酒店', color: '#6b7280', glow: 'rgba(107,114,128,0.35)', icon: '🛏' },
   { id: 'restaurant', label: '餐厅', color: '#b83240', glow: 'rgba(184,50,64,0.4)', icon: '🍽' },
   { id: 'snack', label: '小吃', color: '#d97706', glow: 'rgba(217,119,6,0.4)', icon: '🍜' },
+  { id: 'factory', label: '工厂', color: '#9a3412', glow: 'rgba(154,52,18,0.4)', icon: '🏭' },
   { id: 'attraction', label: '游玩', color: '#ca9a04', glow: 'rgba(202,154,4,0.4)', icon: '📷' },
   { id: 'landmark', label: '地标', color: '#6366d4', glow: 'rgba(99,102,212,0.4)', icon: '📍' },
-  { id: 'transit', label: '交通', color: '#0891b2', glow: 'rgba(8,145,178,0.4)', icon: '↔' },
+  { id: 'transit', label: '交通', color: '#0891b2', glow: 'rgba(8,145,178,0.4)', icon: '🚌' },
 ];
 
 export const TRANSPORTS: { id: TransportMode; label: string }[] = [
@@ -163,25 +170,8 @@ export function categoryMeta(category: string): { label: string; color: string; 
   };
 }
 
-/** 游玩按活动本身上色。地标不在这里：加油站和整点用类别「地标」，不按名字上色。 */
-export const PLAY_KINDS: { id: string; label: string; color: string; glow: string; icon: string }[] = [
-  { id: 'city', label: '城区', color: '#c4b5fd', glow: 'rgba(196,181,253,0.42)', icon: '🚶' },
-  { id: 'nature', label: '自然', color: '#8fce6a', glow: 'rgba(143,206,106,0.4)', icon: '🏞' },
-  { id: 'venue', label: '场馆', color: '#f0a202', glow: 'rgba(240,162,2,0.4)', icon: '🏛' },
-  { id: 'animal', label: '动物', color: '#34d399', glow: 'rgba(52,211,153,0.45)', icon: '🦘' },
-  { id: 'boat', label: '船', color: '#49b6ff', glow: 'rgba(73,182,255,0.45)', icon: '⛴' },
-  { id: 'helicopter', label: '直升机', color: '#7ec8ff', glow: 'rgba(126,200,255,0.45)', icon: '🚁' },
-  { id: 'flight', label: '景观飞机', color: '#d7b0ff', glow: 'rgba(215,176,255,0.42)', icon: '🛩' },
-  { id: 'dive', label: '潜水', color: '#2ad4c8', glow: 'rgba(42,212,200,0.45)', icon: '🤿' },
-  { id: 'skydive', label: '跳伞', color: '#ff4f8b', glow: 'rgba(255,79,139,0.45)', icon: '🪂' },
-  { id: 'shoot', label: '射击', color: '#ff5a36', glow: 'rgba(255,90,54,0.45)', icon: '🎯' },
-  { id: 'speedboat', label: '快艇', color: '#5ee0ff', glow: 'rgba(94,224,255,0.4)', icon: '🚤' },
-  { id: 'cable', label: '缆车', color: '#6fce7a', glow: 'rgba(111,206,122,0.4)', icon: '🚠' },
-  { id: 'luge', label: '滑板', color: '#ff9e2c', glow: 'rgba(255,158,44,0.45)', icon: '🛷' },
-  { id: 'market', label: '集市', color: '#f0c14d', glow: 'rgba(240,193,77,0.4)', icon: '🧺' },
-  { id: 'shop', label: '商店', color: '#e8a87c', glow: 'rgba(232,168,124,0.4)', icon: '🛍' },
-  { id: 'stars', label: '银河', color: '#9eb6ff', glow: 'rgba(158,182,255,0.45)', icon: '🌌' },
-];
+/** 游玩按活动本身上色。名单和图标在 playKinds.json，工具读的是同一份。地标不在这里。 */
+export const PLAY_KINDS: { id: string; label: string; color: string; glow: string; icon: string }[] = playCatalog;
 
 export function nodeFace(node: { category: string; play?: string }): { label: string; color: string; glow: string; icon: string } {
   if (node.category === 'attraction') {

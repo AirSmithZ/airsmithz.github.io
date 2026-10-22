@@ -41,6 +41,7 @@ interface Session {
   width: number;
   height: number;
   activated: boolean;
+  captureEl: Element | null;
   layout: OverviewLayout;
 }
 
@@ -89,19 +90,22 @@ export function useMatrixDrag(
   enabled: boolean,
   spread: boolean,
   onCommit: (dayIndex: number, nodeId: string, patch: PlacePatch) => void,
+  onTap: (nodeId: string) => void,
 ) {
   const sessionRef = useRef<Session | null>(null);
   const blockClick = useRef(false);
   const onCommitRef = useRef(onCommit);
+  const onTapRef = useRef(onTap);
   const daysRef = useRef(days);
   const spreadRef = useRef(spread);
   const [preview, setPreview] = useState<DragPreview | null>(null);
 
   useEffect(() => {
     onCommitRef.current = onCommit;
+    onTapRef.current = onTap;
     daysRef.current = days;
     spreadRef.current = spread;
-  }, [onCommit, days, spread]);
+  }, [onCommit, days, onTap, spread]);
 
   const end = useCallback(() => {
     sessionRef.current = null;
@@ -198,7 +202,9 @@ export function useMatrixDrag(
     const session = sessionRef.current;
     if (!session || session.pointerId !== pointerId) return;
     if (!session.activated) {
+      const nodeId = session.nodeId;
       end();
+      onTapRef.current(nodeId);
       return;
     }
     blockClick.current = true;
@@ -216,6 +222,7 @@ export function useMatrixDrag(
       if (!session.activated) {
         if (Math.hypot(event.clientX - session.startX, event.clientY - session.startY) < OVERVIEW_DRAG_PX) return;
         session.activated = true;
+        capturePointer(session.captureEl, session.pointerId);
       }
       const frame = frameOf(session, event.clientX, event.clientY);
       if (frame) setPreview(frame.preview);
@@ -245,7 +252,6 @@ export function useMatrixDrag(
     layout: OverviewLayout,
   ) => {
     if (!enabled || event.button !== 0) return;
-    capturePointer(event.currentTarget, event.pointerId);
     sessionRef.current = {
       nodeId,
       dayIndex,
@@ -261,6 +267,7 @@ export function useMatrixDrag(
       width: place.width,
       height: place.height,
       activated: false,
+      captureEl: event.currentTarget instanceof Element ? event.currentTarget : null,
       layout,
     };
   }, [enabled]);

@@ -1,8 +1,10 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type TransitionEvent } from 'react';
 import type { DayPlan, TripEdge, TripNode } from '../types';
 import { nodeFace } from '../types';
-import { edgeModeWord } from '../trip';
+import { edgeModeWord, stayParts } from '../trip';
 import { capturePointer } from '../compat';
+import { skyFor } from '../sky';
+import { SkyLine } from './SkyLine';
 
 const SWIPE_MIN = 56;
 const SWIPE_RATIO = 0.33;
@@ -127,6 +129,7 @@ export function NodeCard({
   const missingPhoto = (node.photos ?? []).length === 0;
   const time =
     kind === 'compact' ? node.start_time : [node.start_time, node.end_time].filter(Boolean).join(' – ');
+  const stay = stayParts(node);
   const tone = {
     '--node-color': meta.color,
     '--node-glow': meta.glow,
@@ -157,6 +160,12 @@ export function NodeCard({
           {node.is_optional ? ' · 可选' : ''}
         </span>
         {node.floor ? <span className="trip-node__floor">{node.floor}</span> : null}
+        {stay ? (
+          <span className={`stay-mark${stay.guess ? ' stay-mark--guess' : ''}`}>
+            <span className="stay-mark__kicker">{stay.kicker}</span>
+            <span className="stay-mark__value">{stay.value}</span>
+          </span>
+        ) : null}
       </span>
       <span className="trip-node__name">{node.name}</span>
       {time ? <span className="trip-node__time">{time}</span> : null}
@@ -543,25 +552,29 @@ export function FlowBoard({
   return (
     <div ref={boardRef} className="board-scroll board-scroll--columns">
       <div className="columns">
-        {days.map((day, index) => (
-          <section key={day.date} className={`col${index === dayIndex ? ' is-target' : ''}`} data-day-col={day.day_index}>
-            <button type="button" className="col-head" onClick={() => onPickDay(index)}>
-              <b>
-                D{day.day_index} {day.region}
-              </b>
-              <span>
-                {day.date.slice(5)} {day.weekday} · {day.nodes.length} 站
-              </span>
-              {index === dayIndex ? <em>当前这一天</em> : null}
-            </button>
-            {day.nodes.map((node) => {
-              const selected = node.id === selectedId;
-              return (
-                <NodeCard key={node.id} node={node} selected={selected} compact onSelect={onSelect} />
-              );
-            })}
-          </section>
-        ))}
+        {days.map((day, index) => {
+          const sky = skyFor(day.date);
+          return (
+            <section key={day.date} className={`col${index === dayIndex ? ' is-target' : ''}`} data-day-col={day.day_index}>
+              <button type="button" className="col-head" onClick={() => onPickDay(index)}>
+                <b>
+                  D{day.day_index} {day.region}
+                </b>
+                <span>
+                  {day.date.slice(5)} {day.weekday} · {day.nodes.length} 站
+                </span>
+                {sky ? <SkyLine sky={sky} /> : null}
+                {index === dayIndex ? <em>当前这一天</em> : null}
+              </button>
+              {day.nodes.map((node) => {
+                const selected = node.id === selectedId;
+                return (
+                  <NodeCard key={node.id} node={node} selected={selected} compact onSelect={onSelect} />
+                );
+              })}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

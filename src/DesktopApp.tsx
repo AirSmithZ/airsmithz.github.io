@@ -419,7 +419,7 @@ export function DesktopApp() {
               </p>
             )}
           </div>
-          {ui.scope === 'day' ? <WeatherNotice variant="desk" /> : null}
+          <WeatherNotice variant="desk" />
           <div className="desk__stage stage-view">
             <div className={`view view--front${stage === 'graph' ? '' : ' is-off'}`} data-testid="view-graph">
               {ui.scope === 'all' ? (

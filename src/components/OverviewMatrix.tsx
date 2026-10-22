@@ -15,7 +15,9 @@ import {
   type OverviewCell,
   type OverviewLayout,
 } from '../overview/layout';
+import { skyFor } from '../sky';
 import { NodeCard } from './FlowBoard';
+import { SkyLine } from './SkyLine';
 import './overview.css';
 
 const COL_KEY = 'anz-overview-cols';
@@ -221,7 +223,14 @@ export function OverviewMatrix({
     () => layoutOverview(days, crossEdges, { columnMins, extraRegions, spread }),
     [columnMins, crossEdges, days, extraRegions, spread],
   );
-  const { preview, onPointerDown, shouldSelect } = useMatrixDrag(matrixRef, days, !locked, spread, onPlace);
+  const { preview, onPointerDown, shouldSelect } = useMatrixDrag(
+    matrixRef,
+    days,
+    !locked,
+    spread,
+    onPlace,
+    onSelect,
+  );
   const [range, setRange] = useState(() => seedColumnRange(dayIndex, days.length));
 
   const applyScrollChrome = useCallback(() => {
@@ -378,6 +387,7 @@ export function OverviewMatrix({
             const day = days[index];
             if (!day) return null;
             const focused = index === dayIndex;
+            const sky = skyFor(day.date);
             return (
               <div
                 key={day.date}
@@ -394,6 +404,7 @@ export function OverviewMatrix({
                     <span>{formatHeaderDate(day.date)}</span>
                     <span>{day.weekday}</span>
                   </span>
+                  {sky ? <SkyLine sky={sky} /> : null}
                   {day.label ? <span className="ov-head__label">{day.label}</span> : null}
                 </button>
                 <div

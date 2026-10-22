@@ -541,143 +541,94 @@ button {
   color: var(--text-dim);
 }
 
-.wx-alert {
-  flex: none;
-  align-self: center;
-}
-.is-land .wx-alert { position: relative; }
-.wx-alert__btn {
+/* 总览日期下的天气。现象靠左排成一列，温度用细线隔开，方便顺着日期往下扫。 */
+.ov-sky {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 12px 0 9px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #8eb7e8 32%, var(--border));
-  background:
-    linear-gradient(155deg, rgba(91, 158, 255, 0.2), rgba(245, 158, 11, 0.12) 72%),
-    var(--bg-elevated);
-  color: #f6d7a4;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-.wx-alert__mark {
-  width: 16px;
-  height: 16px;
-  flex: none;
-}
-.wx-alert__label {
-  font-family: var(--display);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  max-width: 100%;
+  min-width: 0;
   line-height: 1;
 }
-.is-short .wx-alert__btn,
-.is-land .wx-alert__btn {
-  height: 36px;
-  min-height: 36px;
-  padding: 0 10px 0 8px;
+.ov-sky__mark {
+  flex: none;
+  font-size: 13px;
+  line-height: 1;
 }
-.is-short .wx-alert__mark,
-.is-land .wx-alert__mark {
-  width: 14px;
-  height: 14px;
-}
-.wx-alert__btn.is-on {
-  border-color: color-mix(in srgb, var(--accent) 62%, transparent);
-  background:
-    linear-gradient(155deg, rgba(91, 158, 255, 0.28), rgba(245, 158, 11, 0.22) 72%),
-    var(--bg-panel);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 0 0 3px rgba(245, 158, 11, 0.14);
-}
-.wx-alert__btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.wx-alert__note {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 12px;
-  left: 12px;
-  z-index: 9;
-  width: auto;
-  margin: 0;
-  padding: 13px 14px 12px;
+.ov-sky__text {
+  min-width: 0;
   overflow: hidden;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
-  background:
-    radial-gradient(140px 96px at 100% 0%, rgba(245, 158, 11, 0.26), transparent 70%),
-    linear-gradient(168deg, #1b2838 0%, #101820 58%);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.46);
-  transform-origin: top center;
-  animation: wx-slip 0.22s ease;
-}
-.is-land .wx-alert__note {
-  left: auto;
-  right: 0;
-  width: min(320px, calc(100vw - 24px));
-  transform-origin: top right;
-}
-.wx-alert__note::before {
-  content: "";
-  position: absolute;
-  top: -64px;
-  right: -46px;
-  width: 104px;
-  height: 104px;
-  border-radius: 50%;
-  border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent);
-  box-shadow: inset 0 0 0 16px color-mix(in srgb, var(--accent) 13%, transparent);
-  pointer-events: none;
-}
-.wx-alert__kicker,
-.wx-alert__lead,
-.wx-alert__body {
-  position: relative;
-  margin: 0;
-}
-.wx-alert__kicker {
-  padding-right: 46px;
   font-family: var(--display);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-sky__rule {
+  flex: none;
+  width: 10px;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent) 62%, var(--border-strong));
+}
+.ov-sky__temp {
+  flex: none;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--text-dim);
+}
+.ov-head.is-on .ov-sky__temp,
+.col.is-target .ov-sky__temp {
   color: var(--accent);
 }
-.wx-alert__lead {
-  margin-top: 6px;
-  padding-right: 22px;
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.35;
+.col-head .ov-sky {
+  gap: 5px;
+  line-height: 1;
+}
+.col-head .ov-sky__mark {
+  font-size: 12px;
+  line-height: 1;
+}
+.col-head .ov-sky__text,
+.col-head .ov-sky__temp {
+  font-size: 11px;
+  line-height: 1;
+}
+.col-head .ov-sky__text {
   color: var(--text);
 }
-.wx-alert__body {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+.col-head .ov-sky__temp {
+  color: var(--text-dim);
+}
+
+.wx-alert {
+  position: relative;
+  flex: none;
+}
+.is-port .wx-alert { position: static; }
+.wx-alert__note {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 9;
+  width: min(260px, calc(100vw - 24px));
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
   color: var(--text-muted);
   font-size: 12px;
   line-height: 1.55;
 }
-@keyframes wx-slip {
-  from {
-    opacity: 0;
-    transform: translateY(-6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .wx-alert__note { animation: none; }
+.is-port .wx-alert__note {
+  right: 12px;
+  width: min(260px, calc(100% - 24px));
 }
 
 .view {
@@ -822,7 +773,7 @@ button {
   gap: 6px;
   margin-bottom: 6px;
 }
-.trip-node--missing .trip-node__header { padding-right: 16px; }
+.trip-node--missing .trip-node__header { padding-right: 22px; }
 .photo-alert {
   position: absolute;
   top: 6px;
@@ -850,13 +801,66 @@ button {
 }
 .trip-node__icon { font-size: 14px; line-height: 1; }
 .trip-node__category {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--node-color);
 }
-.trip-node__floor {
+.stay-mark {
   margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: none;
+  max-width: 100%;
+  padding: 3px 7px 4px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--node-color) 48%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--node-color) 22%, transparent), color-mix(in srgb, var(--node-color) 8%, transparent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--node-color) 18%, transparent);
+}
+.stay-mark__kicker {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: color-mix(in srgb, var(--node-color) 72%, white);
+}
+.stay-mark__value {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--node-color) 8%, white);
+}
+.stay-mark--guess {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+}
+.stay-mark--guess .stay-mark__value {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--node-color) 28%, var(--text));
+}
+.stay-mark--detail {
+  margin: 10px 0 4px;
+  padding: 7px 12px 8px;
+}
+.stay-mark--detail .stay-mark__kicker { font-size: 11px; }
+.stay-mark--detail .stay-mark__value { font-size: 20px; }
+.trip-node--compact .stay-mark {
+  padding: 2px 6px 3px;
+  box-shadow: none;
+}
+.trip-node--compact .stay-mark__kicker { letter-spacing: 0.08em; }
+.trip-node--compact .stay-mark__value { font-size: 12px; }
+.trip-node__floor {
   font-size: 10px;
   color: var(--text-dim);
   background: rgba(255, 255, 255, 0.06);
@@ -941,9 +945,9 @@ button {
   border: 1px solid var(--border);
   background: var(--bg-panel);
 }
-.col-head b,
-.col-head span,
-.col-head em {
+.col-head > b,
+.col-head > span:not(.ov-sky),
+.col-head > em {
   display: block;
   line-height: 1.35;
 }
@@ -2567,6 +2571,7 @@ dialog.photo-zoom {
   gap: 8px;
   box-sizing: border-box;
   overflow: hidden;
+  touch-action: none;
 }
 dialog.photo-zoom:focus {
   outline: none;
@@ -2615,6 +2620,8 @@ dialog.photo-zoom:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  touch-action: none;
 }
 .photo-zoom__frame img {
   max-width: 100%;
@@ -2623,6 +2630,22 @@ dialog.photo-zoom:focus {
   height: auto;
   object-fit: contain;
   background: transparent;
+  transform-origin: center center;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.photo-zoom__frame.is-snap .skel-img img {
+  transition: transform 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-zoom__frame.is-snap .skel-img img { transition: none; }
+}
+@media (any-hover: hover) and (any-pointer: fine) {
+  .photo-zoom__frame { cursor: zoom-in; }
+  .photo-zoom__frame.is-zoomed { cursor: grab; }
+  .photo-zoom__frame.is-zoomed:active { cursor: grabbing; }
 }
 .photo-zoom p {
   flex: none;

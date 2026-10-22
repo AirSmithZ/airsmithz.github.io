@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import type { CostQuote, Doc, EditorSession, NodeCategory, TransportMode, TripEdge, TripNode } from '../types';
 import { CATEGORIES, PLAY_KINDS, TRANSPORTS, nodeFace } from '../types';
 import { formatMoney } from '../money';
-import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
+import { blankNode, edgeModeWord, incomingEdge, previousInDay, stayParts, uid } from '../trip';
 import { actions } from '../store';
 import { Check } from './Check';
 import { usePhotoZoomGesture } from './photoZoomGesture';
@@ -116,6 +116,7 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
   const day =
     (editor ? doc.itinerary.days[editor.dayIndex] : found?.day) ?? doc.itinerary.days[dayIndex];
   const node = found?.node ?? null;
+  const stay = node ? stayParts(node) : null;
   const viewingEdge = node ? incomingEdge(doc, node.id) : null;
 
   function patch(partial: Partial<FormState>) {
@@ -469,6 +470,17 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
               {[node.start_time, node.end_time].filter(Boolean).join(' – ')}
             </p>
           )}
+          {stay ? (
+            <p
+              className={`stay-mark stay-mark--detail${stay.guess ? ' stay-mark--guess' : ''}`}
+              style={{ '--node-color': nodeFace(node).color } as CSSProperties}
+            >
+              <span className="stay-mark__kicker">{stay.kicker}</span>
+              <span className="stay-mark__value">{stay.value}</span>
+            </p>
+          ) : null}
+          {node.dwell_basis === 'usual' && node.dwell_note ? <p className="fine">{node.dwell_note}</p> : null}
+          {node.dwell_basis === 'skip' && node.dwell_note ? <p className="fine">{node.dwell_note}</p> : null}
           {node.address ? <p className="detail-line">{node.address}</p> : null}
           {node.lat !== 0 || node.lng !== 0 ? (
             <p className="fine">
@@ -619,7 +631,7 @@ function PhotoZoom({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const gesture = usePhotoZoomGesture(total, onShift, onClose);
+  const gesture = usePhotoZoomGesture(total, index, onShift, onClose);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -650,18 +662,11 @@ function PhotoZoom({
       tabIndex={-1}
       autoFocus
       onClick={gesture.onClick}
-      onKeyDown={(event) => {
-        if (total < 2) return;
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          onShift(-1);
-        } else if (event.key === 'ArrowRight') {
-          event.preventDefault();
-          onShift(1);
-        }
-      }}
+      onKeyDown={gesture.onKeyDown}
       onPointerDown={gesture.onPointerDown}
+      onPointerMove={gesture.onPointerMove}
       onPointerUp={gesture.onPointerUp}
+      onPointerCancel={gesture.onPointerCancel}
     >
       <div className="photo-zoom__bar">
         {total > 1 ? (
@@ -676,16 +681,27 @@ function PhotoZoom({
         ) : (
           <span />
         )}
-        <button type="button" className="text-btn" onClick={onClose}>
-          关闭
-        </button>
+        <div className="photo-zoom__nav">
+          {gesture.scale > 1 ? (
+            <button type="button" className="text-btn" onClick={gesture.reset}>
+              还原
+            </button>
+          ) : null}
+          <button type="button" className="text-btn" onClick={onClose}>
+            关闭
+          </button>
+        </div>
       </div>
-      <div className="photo-zoom__frame">
+      <div
+        ref={gesture.frameRef}
+        className={`photo-zoom__frame${gesture.snapping ? ' is-snap' : ''}${gesture.scale > 1 ? ' is-zoomed' : ''}`}
+      >
         <SkeletonImage
           src={`${import.meta.env.BASE_URL}${photo.src}`}
           alt={photo.alt}
           fit="frame"
           retry
+          style={gesture.style}
         />
       </div>
       <p>

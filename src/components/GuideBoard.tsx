@@ -114,7 +114,7 @@ function PhotoZoom({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const gesture = usePhotoZoomGesture(total, onShift, onClose);
+  const gesture = usePhotoZoomGesture(total, index, onShift, onClose);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -146,18 +146,11 @@ function PhotoZoom({
       tabIndex={-1}
       autoFocus
       onClick={gesture.onClick}
-      onKeyDown={(event) => {
-        if (total < 2) return;
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault();
-          onShift(-1);
-        } else if (event.key === 'ArrowRight') {
-          event.preventDefault();
-          onShift(1);
-        }
-      }}
+      onKeyDown={gesture.onKeyDown}
       onPointerDown={gesture.onPointerDown}
+      onPointerMove={gesture.onPointerMove}
       onPointerUp={gesture.onPointerUp}
+      onPointerCancel={gesture.onPointerCancel}
     >
       <div className="photo-zoom__bar">
         {total > 1 ? (
@@ -172,16 +165,27 @@ function PhotoZoom({
         ) : (
           <span />
         )}
-        <button type="button" className="text-btn" onClick={onClose}>
-          关闭
-        </button>
+        <div className="photo-zoom__nav">
+          {gesture.scale > 1 ? (
+            <button type="button" className="text-btn" onClick={gesture.reset}>
+              还原
+            </button>
+          ) : null}
+          <button type="button" className="text-btn" onClick={onClose}>
+            关闭
+          </button>
+        </div>
       </div>
-      <div className="photo-zoom__frame">
+      <div
+        ref={gesture.frameRef}
+        className={`photo-zoom__frame${gesture.snapping ? ' is-snap' : ''}${gesture.scale > 1 ? ' is-zoomed' : ''}`}
+      >
         <SkeletonImage
           src={`${import.meta.env.BASE_URL}${figure.src}`}
           alt={figure.alt}
           fit="frame"
           retry
+          style={gesture.style}
         />
       </div>
       <p>

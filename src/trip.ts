@@ -335,6 +335,27 @@ export function edgeModeWord(edge: TripEdge): string {
   return legLead(edge).word;
 }
 
+/** 这一处要待多久。没有分钟、或不估的，返回空。 */
+export function stayParts(node: TripNode): { kicker: string; value: string; guess: boolean } | null {
+  const minutes = node.duration_minutes;
+  if (!minutes || node.dwell_basis === 'skip') return null;
+  const guess = node.dwell_basis === 'usual';
+  return { kicker: guess ? '预估' : '停留', value: formatStay(minutes), guess };
+}
+
+export function stayLabel(node: TripNode): string | null {
+  const parts = stayParts(node);
+  return parts ? `${parts.kicker} ${parts.value}` : null;
+}
+
+function formatStay(minutes: number): string {
+  if (minutes < 60) return `${minutes}分`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (rest === 0) return `${hours}小时`;
+  return `${hours}小时${rest}分`;
+}
+
 function legDistance(meters: number): string {
   if (meters >= 1000) {
     const km = meters / 1000;
