@@ -145,7 +145,7 @@ export const CATEGORIES: { id: NodeCategory; label: string; color: string; glow:
   { id: 'airport', label: '机场', color: '#2d8f6f', glow: 'rgba(45,143,111,0.45)', icon: '✈️' },
   { id: 'hotel', label: '酒店', color: '#6b7280', glow: 'rgba(107,114,128,0.35)', icon: '🛏' },
   { id: 'restaurant', label: '餐厅', color: '#b83240', glow: 'rgba(184,50,64,0.4)', icon: '🍽' },
-  { id: 'snack', label: '小吃', color: '#d97706', glow: 'rgba(217,119,6,0.4)', icon: '🍜' },
+  { id: 'snack', label: '小吃', color: '#d97706', glow: 'rgba(217,119,6,0.4)', icon: '🍨' },
   { id: 'factory', label: '工厂', color: '#9a3412', glow: 'rgba(154,52,18,0.4)', icon: '🏭' },
   { id: 'attraction', label: '游玩', color: '#ca9a04', glow: 'rgba(202,154,4,0.4)', icon: '📷' },
   { id: 'landmark', label: '地标', color: '#6366d4', glow: 'rgba(99,102,212,0.4)', icon: '📍' },
