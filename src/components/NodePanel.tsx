@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { CostQuote, Doc, EditorSession, NodeCategory, TransportMode, TripEdge, TripNode } from '../types';
 import { CATEGORIES, TRANSPORTS, nodeFace } from '../types';
 import { formatMoney } from '../money';
@@ -88,6 +89,11 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
   const [form, setForm] = useState<FormState | null>(null);
   const [error, setError] = useState('');
   const [askDelete, setAskDelete] = useState(false);
+  const [photoAt, setPhotoAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    setPhotoAt(null);
+  }, [selectedId]);
 
   useEffect(() => {
     setError('');
@@ -472,6 +478,9 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
               ))}
             </ul>
           )}
+          {(node.photos ?? []).length > 0 ? (
+            <NodePhotos photos={node.photos ?? []} open={photoAt} onOpen={setPhotoAt} />
+          ) : null}
           <div className="btn-row">
             <button type="button" className="btn btn-primary" onClick={() => actions.beginEdit(node.id)}>
               编辑
@@ -506,5 +515,145 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
         </>
       )}
     </section>
+  );
+}
+
+function NodePhotos({
+  photos,
+  open,
+  onOpen,
+}: {
+  photos: NonNullable<TripNode['photos']>;
+  open: number | null;
+  onOpen: (index: number | null) => void;
+}) {
+  const close = useCallback(() => onOpen(null), [onOpen]);
+  const shift = useCallback(
+    (delta: number) => {
+      onOpen(open == null || photos.length < 2 ? open : (open + delta + photos.length) % photos.length);
+    },
+    [onOpen, open, photos.length],
+  );
+  return (
+    <div className="node-photos">
+      {photos.map((photo, index) => (
+        <figure key={photo.src} className="guide-photo">
+          <button
+            type="button"
+            className="guide-photo__open"
+            aria-label={`放大：${photo.alt}`}
+            onClick={() => onOpen(index)}
+          >
+            <img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={photo.alt} />
+          </button>
+          <figcaption>{photo.alt}</figcaption>
+        </figure>
+      ))}
+      <p className="fine">图来自飞猪商品页，2026-10-22。</p>
+      {open != null && photos[open] ? (
+        <PhotoZoom
+          photo={photos[open]}
+          index={open}
+          total={photos.length}
+          onShift={shift}
+          onClose={close}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function PhotoZoom({
+  photo,
+  index,
+  total,
+  onShift,
+  onClose,
+}: {
+  photo: NonNullable<TripNode['photos']>[number];
+  index: number;
+  total: number;
+  onShift: (delta: number) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const startX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    const onCancel = (event: Event) => {
+      event.preventDefault();
+      onClose();
+    };
+    dialog.addEventListener('cancel', onCancel);
+    return () => {
+      dialog.removeEventListener('cancel', onCancel);
+      if (dialog.open) dialog.close();
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <dialog
+      ref={ref}
+      className="photo-zoom"
+      aria-label={photo.alt}
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.closest('button, img, p')) return;
+        onClose();
+      }}
+      onKeyDown={(event) => {
+        if (total < 2) return;
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          onShift(-1);
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          onShift(1);
+        }
+      }}
+      onPointerDown={(event) => {
+        if ((event.target as HTMLElement).closest('button')) {
+          startX.current = null;
+          return;
+        }
+        startX.current = event.clientX;
+      }}
+      onPointerUp={(event) => {
+        if (startX.current == null || total < 2) return;
+        const delta = event.clientX - startX.current;
+        startX.current = null;
+        if (Math.abs(delta) < 48) return;
+        onShift(delta < 0 ? 1 : -1);
+      }}
+    >
+      <div className="photo-zoom__bar">
+        {total > 1 ? (
+          <div className="photo-zoom__nav">
+            <button type="button" className="text-btn" onClick={() => onShift(-1)}>
+              上一张
+            </button>
+            <button type="button" className="text-btn" onClick={() => onShift(1)}>
+              下一张
+            </button>
+          </div>
+        ) : (
+          <span />
+        )}
+        <button type="button" className="text-btn" onClick={onClose}>
+          关闭
+        </button>
+      </div>
+      <div className="photo-zoom__frame">
+        <img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={photo.alt} />
+      </div>
+      <p>
+        {total > 1 ? `${index + 1} / ${total} · ` : ''}
+        {photo.alt}
+      </p>
+    </dialog>,
+    document.body,
   );
 }

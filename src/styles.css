@@ -808,6 +808,8 @@ button {
 }
 .tips li,
 .quote-read li { margin: 8px 0; }
+.node-photos { margin: 10px 0 4px; }
+.node-photos .fine { margin-top: 8px; }
 .quote-read span,
 .quote-read small { display: block; color: var(--text-muted); font-size: 12px; }
 

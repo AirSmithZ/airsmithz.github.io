@@ -34,6 +34,8 @@ export interface TripNode {
   duration_minutes?: number;
   is_optional: boolean;
   tips?: string[];
+  /** 详情里跟在说明后面的图。src 相对站点根目录，不含开头的斜杠。 */
+  photos?: { src: string; alt: string }[];
   tags?: string[];
   cost_label?: string;
   cost_quotes?: CostQuote[];
