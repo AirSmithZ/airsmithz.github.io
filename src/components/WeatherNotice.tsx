@@ -103,11 +103,11 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
         onClick={() => setOpen((value) => !value)}
       >
         <SkyStamp />
-        <span className="wx-alert__label">示意</span>
+        <span className="wx-alert__label">注意</span>
       </button>
       {open ? (
         <div id={noteId} className="wx-alert__note" role="status">
-          <p className="wx-alert__kicker">天气 · 示意</p>
+          <p className="wx-alert__kicker">天气 · 注意</p>
           <p className="wx-alert__lead">{sky.lead}</p>
           {sky.rest ? (
             <p className="wx-alert__body">

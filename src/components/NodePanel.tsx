@@ -6,6 +6,7 @@ import { formatMoney } from '../money';
 import { blankNode, edgeModeWord, incomingEdge, previousInDay, uid } from '../trip';
 import { actions } from '../store';
 import { Check } from './Check';
+import { SkeletonImage } from './Skeleton';
 
 interface FormState {
   name: string;
@@ -544,7 +545,11 @@ function NodePhotos({
             aria-label={`放大：${photo.alt}`}
             onClick={() => onOpen(index)}
           >
-            <img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={photo.alt} />
+            <SkeletonImage
+              src={`${import.meta.env.BASE_URL}${photo.src}`}
+              alt={photo.alt}
+              ratio="4 / 3"
+            />
           </button>
           <figcaption>{photo.alt}</figcaption>
         </figure>
@@ -647,7 +652,12 @@ function PhotoZoom({
         </button>
       </div>
       <div className="photo-zoom__frame">
-        <img src={`${import.meta.env.BASE_URL}${photo.src}`} alt={photo.alt} />
+        <SkeletonImage
+          src={`${import.meta.env.BASE_URL}${photo.src}`}
+          alt={photo.alt}
+          fit="frame"
+          retry
+        />
       </div>
       <p>
         {total > 1 ? `${index + 1} / ${total} · ` : ''}

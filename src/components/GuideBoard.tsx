@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { guideById, type GuideFigure, type GuideId } from '../guides';
 import type { PrepMode } from './PrepBoard';
+import { SkeletonImage } from './Skeleton';
 
 export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode; onClose: () => void }) {
   const guide = guideById(id);
@@ -59,7 +60,11 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
                       setOpen(at >= 0 ? at : 0);
                     }}
                   >
-                    <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+                    <SkeletonImage
+                      src={`${import.meta.env.BASE_URL}${figure.src}`}
+                      alt={figure.alt}
+                      ratio="3 / 4"
+                    />
                   </button>
                   <figcaption>{figure.caption}</figcaption>
                 </figure>
@@ -179,7 +184,12 @@ function PhotoZoom({
         </button>
       </div>
       <div className="photo-zoom__frame">
-        <img src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} />
+        <SkeletonImage
+          src={`${import.meta.env.BASE_URL}${figure.src}`}
+          alt={figure.alt}
+          fit="frame"
+          retry
+        />
       </div>
       <p>
         {total > 1 ? `${index + 1} / ${total} · ` : ''}
