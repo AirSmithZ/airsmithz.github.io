@@ -8,7 +8,43 @@ export function weatherIsMock(): boolean {
   return mock && note.length > 0;
 }
 
-/** 电脑端一条说明。手机端一个告警，点开才看到同一句话。 */
+function splitSkyNote(text: string): { lead: string; rest: string } {
+  const cut = text.indexOf('。');
+  if (cut < 0) return { lead: text, rest: '' };
+  return { lead: text.slice(0, cut + 1), rest: text.slice(cut + 1).trim() };
+}
+
+function SkyBody({ text }: { text: string }) {
+  const cut = text.indexOf('，');
+  if (cut < 0 || cut > 28) return text;
+  return (
+    <>
+      {text.slice(0, cut + 1)}
+      <br />
+      {text.slice(cut + 1).trim()}
+    </>
+  );
+}
+
+function SkyStamp() {
+  return (
+    <svg className="wx-alert__mark" viewBox="0 0 18 18" aria-hidden="true">
+      <circle cx="9" cy="9" r="2.15" fill="currentColor" />
+      <circle
+        cx="9"
+        cy="9"
+        r="6.15"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeDasharray="2.15 2.35"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** 电脑端一条说明。手机端一枚示意章，点开才看到同一句话。 */
 export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
@@ -54,6 +90,8 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
     );
   }
 
+  const sky = splitSkyNote(note);
+
   return (
     <div className="wx-alert" ref={rootRef}>
       <button
@@ -64,12 +102,19 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
         aria-label="天气是示意"
         onClick={() => setOpen((value) => !value)}
       >
-        <span aria-hidden="true">!</span>
+        <SkyStamp />
+        <span className="wx-alert__label">示意</span>
       </button>
       {open ? (
-        <p id={noteId} className="wx-alert__note" role="status">
-          {note}
-        </p>
+        <div id={noteId} className="wx-alert__note" role="status">
+          <p className="wx-alert__kicker">天气 · 示意</p>
+          <p className="wx-alert__lead">{sky.lead}</p>
+          {sky.rest ? (
+            <p className="wx-alert__body">
+              <SkyBody text={sky.rest} />
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
