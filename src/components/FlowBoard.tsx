@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type TransitionEvent } from 'react';
 import type { DayPlan, TripEdge, TripNode } from '../types';
 import { nodeFace } from '../types';
-import { edgeModeWord, stayParts } from '../trip';
+import { flowHopText, stayParts } from '../trip';
 import { capturePointer } from '../compat';
 import { edgeRubber, fingerVelocity, ListGlide, TRACK_EASE } from '../listGlide';
 import { skyFor } from '../sky';
@@ -82,13 +82,7 @@ const DayFlow = memo(function DayFlow({
           const selected = node.id === selectedId;
           return (
             <li key={node.id}>
-              {edge ? (
-                <p className="hop">
-                  {edgeModeWord(edge)}
-                  {edge.duration_minutes ? ` · ${edge.duration_minutes} 分钟` : ''}
-                  {edge.label ? ` · ${edge.label}` : ''}
-                </p>
-              ) : index > 0 ? (
+              {edge ? <p className="hop">{flowHopText(edge)}</p> : index > 0 ? (
                 <p className="hop hop--quiet">接着</p>
               ) : null}
               <NodeCard node={node} selected={selected} onSelect={onSelect} />

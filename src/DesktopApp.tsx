@@ -143,6 +143,12 @@ export function DesktopApp() {
     actions.setScope(scope);
   }
 
+  function openDigest() {
+    setMenu(false);
+    setCollapsed(false);
+    setSide((current) => (current === 'digest' ? null : 'digest'));
+  }
+
   function openExpense() {
     setMenu(false);
     actions.setPanel('cost');
@@ -181,6 +187,15 @@ export function DesktopApp() {
         <div className="desk__header-actions">
           <button
             type="button"
+            className={`desk__expense-btn${side === 'digest' ? ' is-on' : ''}`}
+            aria-pressed={side === 'digest'}
+            data-testid="open-digest"
+            onClick={openDigest}
+          >
+            汇总信息
+          </button>
+          <button
+            type="button"
             className={`desk__expense-btn${expenseOpen ? ' is-on' : ''}`}
             aria-pressed={expenseOpen}
             data-testid="open-expense"
@@ -204,18 +219,6 @@ export function DesktopApp() {
                     ? '还没改过。这台电脑没有存档时，用初始信息。'
                     : `存在这台电脑里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
                 </p>
-                <button
-                  type="button"
-                  data-testid="open-digest"
-                  onClick={() => {
-                    setMenu(false);
-                    setCollapsed(false);
-                    setSide('digest');
-                  }}
-                >
-                  <b>汇总信息</b>
-                  <small>21 天，每段住哪、亮点写了什么</small>
-                </button>
                 <button
                   type="button"
                   data-testid="open-todo"
@@ -460,6 +463,7 @@ export function DesktopApp() {
                 <TripMap
                   active={stage === 'map'}
                   days={mapDays}
+                  atlas={doc.itinerary.days}
                   crossEdges={crossEdges}
                   includeCross={ui.scope === 'all'}
                   selectedId={ui.selectedId}

@@ -176,6 +176,15 @@ export function PhoneApp() {
     actions.closeDetail();
   }
 
+  function openDigest() {
+    setMenu(false);
+    actions.closeDetail();
+    setDesk(false);
+    const next = side === 'digest' ? null : 'digest';
+    setSide(next);
+    if (land && next) setRailOpen(true);
+  }
+
   const nodePanel = (
     <NodePanel
       doc={doc}
@@ -247,6 +256,15 @@ export function PhoneApp() {
         </div>
         <WeatherNotice variant="phone" />
         <div className="header-end">
+          <button
+            type="button"
+            className={`icon-btn${side === 'digest' ? ' is-on' : ''}`}
+            aria-pressed={side === 'digest'}
+            data-testid="open-digest"
+            onClick={openDigest}
+          >
+            汇总信息
+          </button>
           <div className="menu-wrap">
             <button
               type="button"
@@ -263,20 +281,6 @@ export function PhoneApp() {
                   ? '还没改过。这台手机没有存档时，用初始信息。'
                   : `存在这台手机里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
               </p>
-              <button
-                type="button"
-                data-testid="open-digest"
-                onClick={() => {
-                  setMenu(false);
-                  actions.closeDetail();
-                  setDesk(false);
-                  setSide('digest');
-                  if (land) setRailOpen(true);
-                }}
-              >
-                <b>汇总信息</b>
-                <small>21 天，每段住哪、亮点写了什么</small>
-              </button>
               <button
                 type="button"
                 data-testid="open-todo"
@@ -438,6 +442,7 @@ export function PhoneApp() {
                 <TripMap
                   active={ui.panel === 'map'}
                   days={mapDays}
+                  atlas={doc.itinerary.days}
                   crossEdges={crossEdges}
                   includeCross={ui.scope === 'all'}
                   selectedId={ui.selectedId}

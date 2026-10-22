@@ -281,6 +281,9 @@ button {
   gap: 6px;
   flex: none;
 }
+.header-end .icon-btn {
+  white-space: nowrap;
+}
 
 .menu {
   position: absolute;

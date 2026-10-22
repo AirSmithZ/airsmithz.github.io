@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import maplibregl, { type FilterSpecification, type GeoJSONSource, type Map as MapLibreMap, type MapGeoJSONFeature } from 'maplibre-gl';
+import maplibregl, {
+  type FilterSpecification,
+  type GeoJSONSource,
+  type Map as MapLibreMap,
+  type MapGeoJSONFeature,
+  type SymbolLayerSpecification,
+} from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { DayPlan, TripEdge } from '../types';
 import { nodeFace } from '../types';
@@ -87,6 +93,8 @@ const RASTER_STYLE = {
 interface TripMapProps {
   active: boolean;
   days: DayPlan[];
+  /** 单日地图也要能接到前一天的站。不传就只用 days。 */
+  atlas?: DayPlan[];
   crossEdges: TripEdge[];
   includeCross: boolean;
   selectedId: string | null;
@@ -99,7 +107,7 @@ interface Fix {
   accuracy: number;
 }
 
-export function TripMap({ active, days, crossEdges, includeCross, selectedId, onSelect }: TripMapProps) {
+export function TripMap({ active, days, atlas, crossEdges, includeCross, selectedId, onSelect }: TripMapProps) {
   const host = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const onSelectRef = useRef(onSelect);
@@ -121,8 +129,8 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
   onLegRef.current = setLeg;
 
   const model = useMemo(
-    () => buildMapModel(days, crossEdges, includeCross, selectedId, (node) => nodeFace(node).color),
-    [days, crossEdges, includeCross, selectedId],
+    () => buildMapModel(days, crossEdges, includeCross, selectedId, (node) => nodeFace(node).color, atlas ?? days),
+    [days, atlas, crossEdges, includeCross, selectedId],
   );
 
   const fitKey = days.map((day) => day.day_index).join(',');
@@ -215,26 +223,38 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
           'circle-stroke-color': '#e8edf4',
         },
       });
+      const nodeLabelLayout = {
+        'text-field': ['get', 'label'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 3, 11, 8, 13, 13, 14],
+        'text-font': LABEL_FONT,
+        'text-anchor': ['get', 'anchor'],
+        'text-radial-offset': ['case', ['==', ['get', 'fan'], 0], 1.15, 0.85],
+        'text-max-width': 10,
+        'text-padding': 2,
+        'text-allow-overlap': ['step', ['zoom'], false, 7, true],
+        'text-ignore-placement': ['step', ['zoom'], false, 11, true],
+      } satisfies SymbolLayerSpecification['layout'];
+      const nodeLabelPaint = {
+        'text-color': '#e8edf4',
+        'text-halo-color': 'rgba(12, 18, 25, 0.92)',
+        'text-halo-width': 1.2,
+      };
       map.addLayer({
         id: 'node-labels',
         type: 'symbol',
         source: 'nodes',
-        layout: {
-          'text-field': ['get', 'name'],
-          'text-size': ['interpolate', ['linear'], ['zoom'], 3, 11, 8, 13, 13, 14],
-          'text-font': LABEL_FONT,
-          'text-offset': [0, -1.35],
-          'text-anchor': 'bottom',
-          'text-max-width': 10,
-          'text-padding': 2,
-          'text-allow-overlap': ['step', ['zoom'], false, 10.5, true],
-          'text-ignore-placement': ['step', ['zoom'], false, 10.5, true],
-        },
-        paint: {
-          'text-color': '#e8edf4',
-          'text-halo-color': 'rgba(12, 18, 25, 0.92)',
-          'text-halo-width': 1.2,
-        },
+        filter: ['!=', ['get', 'optional'], 1],
+        layout: nodeLabelLayout,
+        paint: nodeLabelPaint,
+      });
+      map.addLayer({
+        id: 'node-labels-optional',
+        type: 'symbol',
+        source: 'nodes',
+        filter: ['==', ['get', 'optional'], 1],
+        minzoom: 11,
+        layout: nodeLabelLayout,
+        paint: nodeLabelPaint,
       });
       const addLineLabel = (id: string, source: string) => {
         map.addLayer({
@@ -262,7 +282,7 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
       };
       addLineLabel('line-labels-main', 'lines-main');
       addLineLabel('line-labels-alt', 'lines-alt');
-      const nodeLayers = ['nodes', 'node-labels'].filter((id) => map.getLayer(id));
+      const nodeLayers = ['nodes', 'node-labels', 'node-labels-optional'].filter((id) => map.getLayer(id));
       const lineLayers = [
         'line-labels-main',
         'line-labels-alt',
@@ -381,7 +401,7 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
       const bounds = new maplibregl.LngLatBounds();
       for (const point of model.located) bounds.extend([point.lng, point.lat]);
       map.fitBounds(bounds, {
-        padding: { top: 36, bottom: 56, left: 24, right: 76 },
+        padding: { top: 56, bottom: 72, left: 72, right: 96 },
         maxZoom: 13,
         duration: 400,
       });
@@ -423,7 +443,7 @@ export function TripMap({ active, days, crossEdges, includeCross, selectedId, on
     if (!map || model.located.length === 0) return;
     const bounds = new maplibregl.LngLatBounds();
     for (const point of model.located) bounds.extend([point.lng, point.lat]);
-    map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 500 });
+    map.fitBounds(bounds, { padding: { top: 56, bottom: 72, left: 72, right: 96 }, maxZoom: 13, duration: 500 });
   }
 
   function stopLocate() {

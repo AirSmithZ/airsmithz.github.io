@@ -335,6 +335,14 @@ export function edgeModeWord(edge: TripEdge): string {
   return legLead(edge).word;
 }
 
+/** 流程图两站之间那一行。地图弹层用同一句。 */
+export function flowHopText(edge: TripEdge): string {
+  const parts = [edgeModeWord(edge)];
+  if (edge.duration_minutes) parts.push(`${edge.duration_minutes} 分钟`);
+  if (edge.label) parts.push(edge.label);
+  return parts.join(' · ');
+}
+
 /** 这一处要待多久。没有分钟、或不估的，返回空。 */
 export function stayParts(node: TripNode): { kicker: string; value: string; guess: boolean } | null {
   const minutes = node.duration_minutes;
@@ -395,31 +403,64 @@ export function mapLegCaption(edge: TripEdge): string {
   return parts.join(' · ');
 }
 
-function jitter(nodes: TripNode[]): Map<string, { lng: number; lat: number }> {
-  const groups = new Map<string, TripNode[]>();
+const LABEL_ANCHORS = ['bottom', 'top', 'right', 'left', 'bottom-right', 'bottom-left', 'top-right', 'top-left'];
+
+function placeKey(node: Pick<TripNode, 'lat' | 'lng'>): string {
+  return `${node.lat.toFixed(4)},${node.lng.toFixed(4)}`;
+}
+
+function isFuel(node: TripNode): boolean {
+  return (node.tags ?? []).includes('加油站') || (node.scene_group ?? '').includes('加油站');
+}
+
+/** 同一坐标的信息点共用一颗钉，标签绕开，不再把路线拧成一小圈。 */
+function fanOf(nodes: TripNode[]): Map<string, number> {
+  const groups = new Map<string, string[]>();
   for (const node of nodes) {
     if (!hasCoords(node)) continue;
-    const key = `${node.lat.toFixed(4)},${node.lng.toFixed(4)}`;
-    const list = groups.get(key) ?? [];
-    list.push(node);
-    groups.set(key, list);
+    const list = groups.get(placeKey(node)) ?? [];
+    list.push(node.id);
+    groups.set(placeKey(node), list);
   }
-  const out = new Map<string, { lng: number; lat: number }>();
-  for (const list of groups.values()) {
-    list.forEach((node, index) => {
-      if (index === 0) {
-        out.set(node.id, { lng: node.lng, lat: node.lat });
-        return;
-      }
-      const angle = (index / list.length) * Math.PI * 2;
-      const radius = 0.00045 * Math.ceil(index / 8);
-      out.set(node.id, {
-        lng: node.lng + Math.cos(angle) * radius,
-        lat: node.lat + Math.sin(angle) * radius,
+  const fan = new Map<string, number>();
+  for (const ids of groups.values()) ids.forEach((id, index) => fan.set(id, index));
+  return fan;
+}
+
+function pointLabel(node: TripNode): string {
+  const time = [node.start_time, node.end_time].filter(Boolean).join('–');
+  const stay = stayLabel(node);
+  const sub = [time, stay].filter(Boolean).join(' · ');
+  return sub ? `${node.name}\n${sub}` : node.name;
+}
+
+/** 流程图上前后相接、却没有线的必经站，补到地图上。加油站和可选参考点不补。 */
+function bridgeFlowGaps(days: DayPlan[], edges: TripEdge[]): TripEdge[] {
+  const linked = new Set(edges.map((edge) => `${edge.from}|${edge.to}`));
+  const incoming = new Set(edges.map((edge) => edge.to));
+  const extra: TripEdge[] = [];
+  for (const day of days) {
+    const seq = day.nodes.filter((node) => hasCoords(node) && !node.is_optional && !isFuel(node));
+    for (let index = 1; index < seq.length; index += 1) {
+      const from = seq[index - 1];
+      const to = seq[index];
+      const key = `${from.id}|${to.id}`;
+      if (linked.has(key) || incoming.has(to.id)) continue;
+      linked.add(key);
+      const back = /^回到/.test(to.name);
+      extra.push({
+        id: `map-bridge-${from.id}-${to.id}`,
+        from: from.id,
+        to: to.id,
+        type: 'primary',
+        transport_mode: back ? 'taxi' : 'walk',
+        duration_minutes: 0,
+        label: back ? '开车回去' : '接着',
+        route_source: 'estimate',
       });
-    });
+    }
   }
-  return out;
+  return extra;
 }
 
 export function buildMapModel(
@@ -428,48 +469,59 @@ export function buildMapModel(
   includeCross: boolean,
   selectedId: string | null,
   colorOf: (node: TripNode) => string,
+  catalog: DayPlan[] = days,
 ): MapModel {
   const nodes = days.flatMap((day) => day.nodes);
-  const display = jitter(nodes);
+  const fan = fanOf(nodes);
   const located: MapPoint[] = [];
   const pointFeatures: GeoFeature[] = [];
   for (const node of nodes) {
-    const spot = display.get(node.id);
-    if (!spot) continue;
+    if (!hasCoords(node)) continue;
     const color = colorOf(node);
-    located.push({ id: node.id, name: node.name, ...spot, color, optional: node.is_optional });
+    const slot = fan.get(node.id) ?? 0;
+    located.push({ id: node.id, name: node.name, lng: node.lng, lat: node.lat, color, optional: node.is_optional });
     pointFeatures.push({
       type: 'Feature',
       properties: {
         id: node.id,
         name: node.name,
+        label: pointLabel(node),
+        anchor: LABEL_ANCHORS[slot % LABEL_ANCHORS.length] ?? 'bottom',
+        fan: slot,
         color,
         optional: node.is_optional ? 1 : 0,
         selected: node.id === selectedId ? 1 : 0,
       },
-      geometry: { type: 'Point', coordinates: [spot.lng, spot.lat] },
+      geometry: { type: 'Point', coordinates: [node.lng, node.lat] },
     });
   }
-  const byId = new Map(nodes.map((node) => [node.id, node]));
-  const edges = days.flatMap((day) => day.edges);
-  if (includeCross) {
-    for (const edge of crossEdges) {
-      if (display.has(edge.from) && display.has(edge.to)) edges.push(edge);
-    }
+  pointFeatures.sort((a, b) => Number(a.properties.selected) - Number(b.properties.selected));
+  const byId = new Map(catalog.flatMap((day) => day.nodes).map((node) => [node.id, node]));
+  const visible = new Set(nodes.map((node) => node.id));
+  const edges = [...days.flatMap((day) => day.edges), ...bridgeFlowGaps(days, days.flatMap((day) => day.edges))];
+  const seen = new Set(edges.map((edge) => edge.id));
+  for (const edge of crossEdges) {
+    if (seen.has(edge.id)) continue;
+    const touches = visible.has(edge.from) || visible.has(edge.to);
+    if (!includeCross && !touches) continue;
+    if (!byId.has(edge.from) || !byId.has(edge.to)) continue;
+    edges.push(edge);
+    seen.add(edge.id);
   }
   const lineFeatures: GeoFeature[] = [];
   for (const edge of edges) {
-    const from = display.get(edge.from);
-    const to = display.get(edge.to);
     const fromNode = byId.get(edge.from);
     const toNode = byId.get(edge.to);
-    if (!from || !to || !fromNode || !toNode || edge.from === edge.to) continue;
+    if (!fromNode || !toNode || !hasCoords(fromNode) || !hasCoords(toNode) || edge.from === edge.to) continue;
+    if (placeKey(fromNode) === placeKey(toNode)) continue;
+    const from = { lng: fromNode.lng, lat: fromNode.lat };
+    const to = { lng: toNode.lng, lat: toNode.lat };
     const stored = edge.distance_meters ?? 0;
     const geometric = Math.round(haversineMeters(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng));
     const meters = stored > 0 ? stored : geometric;
     const captionEdge = stored > 0 ? edge : { ...edge, distance_meters: meters };
     const lead = legLead(edge);
-    const detail = edge.label?.trim() || mapLegCaption(captionEdge);
+    const detail = flowHopText(edge);
     lineFeatures.push({
       type: 'Feature',
       properties: {

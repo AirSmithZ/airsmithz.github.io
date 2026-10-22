@@ -2,6 +2,8 @@ import { useEffect, useRef, type RefObject } from 'react';
 
 /** 系统返回手势只认屏幕最左边这一条。再宽就会挡住日期条的点按。 */
 const EDGE = 24;
+/** 比系统边缘再宽一截：这里不改滚动，只在已经明显向右时取消浏览器后退。 */
+const WIDE = 56;
 const TAP = 8;
 
 /**
@@ -79,6 +81,7 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
       axis: 'x' | 'y' | null;
       owned: boolean;
       blocked: boolean;
+      near: boolean;
       scrollY: HTMLElement | null;
       scrollX: HTMLElement | null;
       top: number;
@@ -86,6 +89,7 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
     } | null = null;
     let allowSynth = false;
     let blockGhost = false;
+    let wideSwipe = false;
     let ghostTimer = 0;
 
     const armGhost = () => {
@@ -101,8 +105,10 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
         allowSynth = false;
         return;
       }
-      if (!blockGhost || event.clientX <= 0 || event.clientX > EDGE + 12) return;
+      if (!blockGhost) return;
+      if (!wideSwipe && (event.clientX <= 0 || event.clientX > EDGE + 12)) return;
       blockGhost = false;
+      wideSwipe = false;
       window.clearTimeout(ghostTimer);
       event.preventDefault();
       event.stopPropagation();
@@ -116,10 +122,17 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
 
     const onMove = (event: TouchEvent) => {
       if (!track || event.touches.length !== 1) return;
-      if (event.cancelable) event.preventDefault();
       const touch = event.touches[0];
       const dx = touch.clientX - track.x;
       const dy = touch.clientY - track.y;
+      if (!track.near) {
+        if (dx > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+          wideSwipe = true;
+          if (event.cancelable) event.preventDefault();
+        }
+        return;
+      }
+      if (event.cancelable) event.preventDefault();
       track.axis = edgeAxis(dx, dy, track.axis);
       if (track.owned) return;
       if (track.axis === 'y' && track.scrollY) {
@@ -158,8 +171,9 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
     const onStart = (event: TouchEvent) => {
       if (event.touches.length !== 1) return;
       const touch = event.touches[0];
-      if (touch.clientX > EDGE) return;
-      const blocked = event.cancelable;
+      if (touch.clientX > WIDE) return;
+      const near = touch.clientX <= EDGE;
+      const blocked = near && event.cancelable;
       if (blocked) event.preventDefault();
       const owned = ownsGesture(event.target);
       const scrollY = owned ? null : scrollableOf(event.target, 'y');
@@ -171,8 +185,9 @@ export function usePortraitEdgeGuard(enabled: boolean): void {
         axis: null,
         owned,
         blocked,
-        scrollY,
-        scrollX,
+        near,
+        scrollY: near ? scrollY : null,
+        scrollX: near ? scrollX : null,
         top: scrollY?.scrollTop ?? 0,
         left: scrollX?.scrollLeft ?? 0,
       };
@@ -412,4 +427,33 @@ export function usePanelSwipe(layerRef: RefObject<HTMLElement | null>, enabled: 
       clearPaint();
     };
   }, [enabled, layerRef]);
+}
+
+/**
+ * 浏览器的返回手势有时赶在脚本前面，页会离开。
+ * 先压一条本页记录。滑回去只弹掉这一条，再补上。
+ * 很快连按两次返回，才真正离开。
+ */
+export function useStayOnPage(): void {
+  useEffect(() => {
+    const current = history.state as { anzStay?: number } | null;
+    if (current?.anzStay !== 1) history.pushState({ anzStay: 1 }, '');
+    let lastPop = 0;
+    let leaving = false;
+    const onPop = () => {
+      if (leaving) return;
+      const now = performance.now();
+      if (now - lastPop < 650) {
+        leaving = true;
+        history.back();
+        return;
+      }
+      lastPop = now;
+      window.setTimeout(() => {
+        if (!leaving) history.pushState({ anzStay: 1 }, '');
+      }, 0);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 }
