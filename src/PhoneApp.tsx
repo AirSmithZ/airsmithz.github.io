@@ -183,6 +183,7 @@ export function PhoneApp() {
     <div
       className={`shell${land ? ' is-land' : ' is-port'}${short ? ' is-short' : ''}`}
     >
+      <WeatherNotice variant="phone" />
       <header className="header" ref={headerRef}>
         <div className="header-scroll">
         <div className="brand">
@@ -354,7 +355,6 @@ export function PhoneApp() {
             </div>
           )}
           </div>
-          <WeatherNotice variant="phone" />
         </div>
       </header>
 

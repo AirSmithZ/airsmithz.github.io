@@ -1,11 +1,12 @@
 [
   { "id": "city", "label": "城区", "color": "#c4b5fd", "glow": "rgba(196,181,253,0.42)", "icon": "🚶" },
   { "id": "nature", "label": "自然", "color": "#8fce6a", "glow": "rgba(143,206,106,0.4)", "icon": "🏞" },
+  { "id": "beach", "label": "海滩", "color": "#38bdf8", "glow": "rgba(56,189,248,0.45)", "icon": "🏖️" },
   { "id": "venue", "label": "场馆", "color": "#f0a202", "glow": "rgba(240,162,2,0.4)", "icon": "🏛" },
   { "id": "animal", "label": "动物", "color": "#34d399", "glow": "rgba(52,211,153,0.45)", "icon": "🦘" },
   { "id": "boat", "label": "船", "color": "#49b6ff", "glow": "rgba(73,182,255,0.45)", "icon": "⛴" },
   { "id": "helicopter", "label": "直升机", "color": "#7ec8ff", "glow": "rgba(126,200,255,0.45)", "icon": "🚁" },
-  { "id": "flight", "label": "景观飞机", "color": "#d7b0ff", "glow": "rgba(215,176,255,0.42)", "icon": "✈️" },
+  { "id": "flight", "label": "景观飞机", "color": "#d7b0ff", "glow": "rgba(215,176,255,0.42)", "icon": "🛩️" },
   { "id": "dive", "label": "潜水", "color": "#2ad4c8", "glow": "rgba(42,212,200,0.45)", "icon": "🤿" },
   { "id": "skydive", "label": "跳伞", "color": "#ff4f8b", "glow": "rgba(255,79,139,0.45)", "icon": "🪂" },
   { "id": "shoot", "label": "射击", "color": "#ff5a36", "glow": "rgba(255,90,54,0.45)", "icon": "🎯" },

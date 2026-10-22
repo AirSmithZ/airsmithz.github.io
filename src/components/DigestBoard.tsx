@@ -33,7 +33,12 @@ export function DigestBoard({ mode, onClose }: DigestBoardProps) {
               <p className="digest__when">{stop.when}</p>
               <ul>
                 {stop.items.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item.text}>
+                    <span className="digest__icon" aria-hidden>
+                      {item.icon}
+                    </span>
+                    <span>{item.text}</span>
+                  </li>
                 ))}
               </ul>
             </div>

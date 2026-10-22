@@ -173,7 +173,28 @@ export function categoryMeta(category: string): { label: string; color: string; 
 /** 游玩按活动本身上色。名单和图标在 playKinds.json，工具读的是同一份。地标不在这里。 */
 export const PLAY_KINDS: { id: string; label: string; color: string; glow: string; icon: string }[] = playCatalog;
 
-export function nodeFace(node: { category: string; play?: string }): { label: string; color: string; glow: string; icon: string } {
+const FUEL_FACE = {
+  label: '加油站',
+  color: '#f59e0b',
+  glow: 'rgba(245,158,11,0.4)',
+  icon: '⛽️',
+};
+
+const SOUND_FACE = {
+  label: '游船',
+  color: '#49b6ff',
+  glow: 'rgba(73,182,255,0.45)',
+  icon: '🛳️',
+};
+
+export function nodeFace(node: {
+  category: string;
+  play?: string;
+  tags?: string[];
+  name?: string;
+}): { label: string; color: string; glow: string; icon: string } {
+  if (node.tags?.includes('加油站')) return FUEL_FACE;
+  if (node.name === '峡湾游船') return SOUND_FACE;
   if (node.category === 'attraction') {
     const kind = PLAY_KINDS.find((item) => item.id === node.play);
     if (kind) return kind;

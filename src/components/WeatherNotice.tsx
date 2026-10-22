@@ -10,7 +10,7 @@ export function weatherIsMock(): boolean {
   return mock && note.length > 0;
 }
 
-/** 电脑端一条说明。手机端一枚「示意」，点开才看到同一句话。不是示意天气时两者都不出现。 */
+/** 电脑端一条说明。手机端在页面顶部一枚「提醒」，点开才看到同一句话。不是示意天气时两者都不出现。 */
 export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
   const [open, setOpen] = useState(false);
   const noteId = useId();
@@ -63,10 +63,10 @@ export function WeatherNotice({ variant }: { variant: 'desk' | 'phone' }) {
         className={`icon-btn${open ? ' is-on' : ''}`}
         aria-expanded={open}
         aria-controls={noteId}
-        aria-label="天气是示意"
+        aria-label="天气提醒"
         onClick={() => setOpen((value) => !value)}
       >
-        示意
+        提醒
       </button>
       {open ? (
         <p id={noteId} className="wx-alert__note" role="status">

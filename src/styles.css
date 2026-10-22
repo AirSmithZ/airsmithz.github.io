@@ -607,9 +607,12 @@ button {
 
 .wx-alert {
   position: relative;
+  z-index: 7;
   flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 12px 0;
 }
-.is-port .wx-alert { position: static; }
 .wx-alert__note {
   position: absolute;
   top: calc(100% + 6px);
@@ -626,9 +629,10 @@ button {
   font-size: 12px;
   line-height: 1.55;
 }
-.is-port .wx-alert__note {
-  right: 12px;
-  width: min(260px, calc(100% - 24px));
+.is-port .wx-alert__note,
+.is-land .wx-alert__note {
+  right: 0;
+  width: min(280px, calc(100vw - 24px));
 }
 
 .view {
@@ -2149,7 +2153,13 @@ button {
   margin: 6px 0 0;
   padding: 0;
 }
-.digest__body li { line-height: 1.45; }
+.digest__body li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.45;
+}
+.digest__icon { flex: none; }
 .digest__stops > li.is-quiet .digest__index,
 .digest__stops > li.is-quiet .digest__body li {
   color: var(--text-dim);
