@@ -3,7 +3,7 @@
  * 启动时若和 localStorage 的 anz-data-version 不一致，就清掉没被人手改过的内容缓存。
  * 界面偏好（侧栏宽度、总览列宽、当前天）不在这里。
  */
-export const DATA_VERSION = 12;
+export const DATA_VERSION = 15;
 
 const VERSION_KEY = 'anz-data-version';
 const MANUAL_KEY = 'anz-prep-manual';
