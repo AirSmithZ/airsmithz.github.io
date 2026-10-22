@@ -71,27 +71,25 @@ export function DayStrip({ days, dayIndex, locked, onPick }: DayStripProps) {
             disabled={locked && !on}
             onClick={() => onPick(index)}
           >
-            <b>D{day.day_index}</b>
+            <span className="day-kicker">
+              <b>D{day.day_index}</b>
+              {sky ? (
+                <span className="day-wx">
+                  <span className="day-wx__mark" aria-hidden="true">
+                    {sky.emoji}
+                  </span>
+                  <span className="day-wx__text">{chipText(sky.text)}</span>
+                  <span className="day-wx__temp">
+                    {sky.temp_min}–{sky.temp_max}°
+                  </span>
+                </span>
+              ) : null}
+            </span>
             <span className="day-date">
               {day.date.slice(5)}
               <i>{day.weekday}</i>
             </span>
-            {day.region || sky ? (
-              <small className="day-place">
-                {day.region}
-                {sky ? (
-                  <span className="day-wx">
-                    <span className="day-wx__mark" aria-hidden="true">
-                      {sky.emoji}
-                    </span>
-                    <span className="day-wx__text">{chipText(sky.text)}</span>
-                    <span className="day-wx__temp">
-                      {sky.temp_min}–{sky.temp_max}°
-                    </span>
-                  </span>
-                ) : null}
-              </small>
-            ) : null}
+            {day.region ? <small className="day-place">{day.region}</small> : null}
           </button>
         );
       })}

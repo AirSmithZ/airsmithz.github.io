@@ -498,14 +498,21 @@ button {
 }
 .day-chip:disabled { opacity: 0.4; }
 
-/* 天气缩在城市同一行，横排。日期和星期不动，卡片不加高。 */
-.day-chip.has-wx .day-place {
+/* 天气贴在天数右侧，同一行。日期、城市各留一行，卡片不加高。 */
+.day-chip .day-kicker {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1;
+  color: inherit;
+  white-space: nowrap;
+}
+.day-chip.is-on .day-kicker { color: inherit; }
+.day-chip.has-wx small {
   max-width: none;
-  overflow: visible;
-  text-overflow: clip;
 }
 .day-wx {
   display: inline-flex;
