@@ -772,6 +772,7 @@ button {
 .hop--quiet { opacity: 0.7; }
 
 .trip-node {
+  position: relative;
   display: block;
   width: 168px;
   min-height: 88px;
@@ -820,6 +821,32 @@ button {
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
+}
+.trip-node--missing .trip-node__header { padding-right: 16px; }
+.photo-alert {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #2a1d05;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: 0 0 0 2px rgba(20, 16, 8, 0.45);
+  pointer-events: none;
+}
+.trip-node--compact .photo-alert {
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  font-size: 11px;
+  line-height: 14px;
 }
 .trip-node__icon { font-size: 14px; line-height: 1; }
 .trip-node__category {
@@ -968,7 +995,11 @@ button {
 .node-detail,
 .node-form { padding: 0 12px 8px; }
 .node-form { padding-top: 4px; }
-.detail-title { padding: 12px 12px 0; }
+.detail-title {
+  position: relative;
+  padding: 12px 36px 0 12px;
+}
+.detail-title .photo-alert { top: 14px; right: 12px; }
 .detail-title h2,
 .panel-head h2 { font-size: 26px; line-height: 1.2; }
 

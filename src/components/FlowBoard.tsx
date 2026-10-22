@@ -124,6 +124,7 @@ export function NodeCard({
 }) {
   const kind = variant ?? (compact ? 'compact' : 'flow');
   const meta = nodeFace(node);
+  const missingPhoto = (node.photos ?? []).length === 0;
   const time =
     kind === 'compact' ? node.start_time : [node.start_time, node.end_time].filter(Boolean).join(' – ');
   const tone = {
@@ -133,7 +134,7 @@ export function NodeCard({
   return (
     <button
       type="button"
-      className={`trip-node${kind === 'flow' ? ' trip-node--flow' : ' trip-node--compact'}${kind === 'matrix' ? ' trip-node--matrix' : ''}${selected ? ' trip-node--selected' : ''}${node.is_optional ? ' trip-node--optional' : ''}`}
+      className={`trip-node${kind === 'flow' ? ' trip-node--flow' : ' trip-node--compact'}${kind === 'matrix' ? ' trip-node--matrix' : ''}${selected ? ' trip-node--selected' : ''}${node.is_optional ? ' trip-node--optional' : ''}${missingPhoto ? ' trip-node--missing' : ''}`}
       style={tone}
       data-node-id={node.id}
       aria-pressed={selected}
@@ -160,6 +161,12 @@ export function NodeCard({
       <span className="trip-node__name">{node.name}</span>
       {time ? <span className="trip-node__time">{time}</span> : null}
       {kind !== 'compact' && node.cost_label ? <span className="trip-node__cost">{node.cost_label}</span> : null}
+      {missingPhoto ? (
+        <span className="photo-alert" title="还没有参考图">
+          <span aria-hidden>!</span>
+          <span className="sr-only">还没有参考图</span>
+        </span>
+      ) : null}
     </button>
   );
 }

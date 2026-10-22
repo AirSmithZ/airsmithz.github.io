@@ -432,6 +432,12 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
         <div className="node-detail">
           <header className="detail-title">
             <h2>{node.name}</h2>
+            {(node.photos ?? []).length === 0 ? (
+              <span className="photo-alert" title="还没有参考图">
+                <span aria-hidden>!</span>
+                <span className="sr-only">还没有参考图</span>
+              </span>
+            ) : null}
           </header>
           <p className="card-kicker" style={{ color: nodeFace(node).color }}>
             {nodeFace(node).icon} {nodeFace(node).label}
@@ -519,6 +525,13 @@ export function NodePanel({ doc, editor, selectedId, dayIndex, variant, onClose,
   );
 }
 
+const TOUR_CREDIT = '图来自飞猪商品页，2026-10-22。';
+
+function photoCredit(photo: { credit?: string }): string {
+  const credit = photo.credit?.trim();
+  return credit || TOUR_CREDIT;
+}
+
 function NodePhotos({
   photos,
   open,
@@ -535,6 +548,8 @@ function NodePhotos({
     },
     [onOpen, open, photos.length],
   );
+  const credits = photos.map(photoCredit);
+  const shared = credits.every((item) => item === credits[0]) ? credits[0] : null;
   return (
     <div className="node-photos">
       {photos.map((photo, index) => (
@@ -552,9 +567,10 @@ function NodePhotos({
             />
           </button>
           <figcaption>{photo.alt}</figcaption>
+          {shared ? null : <p className="fine">{credits[index]}</p>}
         </figure>
       ))}
-      <p className="fine">图来自飞猪商品页，2026-10-22。</p>
+      {shared ? <p className="fine">{shared}</p> : null}
       {open != null && photos[open] ? (
         <PhotoZoom
           photo={photos[open]}
