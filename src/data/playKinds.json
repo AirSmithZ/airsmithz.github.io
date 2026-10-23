@@ -15,5 +15,6 @@
   { "id": "luge", "label": "滑板", "color": "#ff9e2c", "glow": "rgba(255,158,44,0.45)", "icon": "🛷" },
   { "id": "market", "label": "集市", "color": "#f0c14d", "glow": "rgba(240,193,77,0.4)", "icon": "🧺" },
   { "id": "shop", "label": "商店", "color": "#e8a87c", "glow": "rgba(232,168,124,0.4)", "icon": "🛍" },
+  { "id": "farm", "label": "农场", "color": "#c4a35a", "glow": "rgba(196,163,90,0.42)", "icon": "🚜" },
   { "id": "stars", "label": "银河", "color": "#9eb6ff", "glow": "rgba(158,182,255,0.45)", "icon": "🌌" }
 ]

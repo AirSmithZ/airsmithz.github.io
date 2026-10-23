@@ -110,10 +110,12 @@ export function DesktopApp() {
   const [menu, setMenu] = useState(false);
   const [spread, setSpread] = useState(false);
   const [askReset, setAskReset] = useState(false);
-  const [side, setSide] = useState<null | 'digest' | PrepKind | GuideId>(null);
-  const held = useRef<'graph' | 'map'>(ui.panel === 'map' ? 'map' : 'graph');
-  if (ui.panel === 'graph' || ui.panel === 'map') held.current = ui.panel;
-  const stage: 'graph' | 'map' = ui.panel === 'cost' ? held.current : ui.panel;
+  const [side, setSide] = useState<null | PrepKind | GuideId>(null);
+  const held = useRef<'graph' | 'map' | 'overview'>(
+    ui.panel === 'map' ? 'map' : ui.panel === 'overview' ? 'overview' : 'graph',
+  );
+  if (ui.panel === 'graph' || ui.panel === 'map' || ui.panel === 'overview') held.current = ui.panel;
+  const stage = ui.panel === 'cost' ? held.current : ui.panel;
 
   const day = doc.itinerary.days[ui.dayIndex];
   const first = doc.itinerary.days[0];
@@ -141,12 +143,6 @@ export function DesktopApp() {
   function chooseScope(scope: Scope) {
     setMenu(false);
     actions.setScope(scope);
-  }
-
-  function openDigest() {
-    setMenu(false);
-    setCollapsed(false);
-    setSide((current) => (current === 'digest' ? null : 'digest'));
   }
 
   function openExpense() {
@@ -185,24 +181,6 @@ export function DesktopApp() {
           </div>
         </div>
         <div className="desk__header-actions">
-          <button
-            type="button"
-            className={`desk__expense-btn${side === 'digest' ? ' is-on' : ''}`}
-            aria-pressed={side === 'digest'}
-            data-testid="open-digest"
-            onClick={openDigest}
-          >
-            汇总信息
-          </button>
-          <button
-            type="button"
-            className={`desk__expense-btn${expenseOpen ? ' is-on' : ''}`}
-            aria-pressed={expenseOpen}
-            data-testid="open-expense"
-            onClick={() => (expenseOpen ? closeExpense() : openExpense())}
-          >
-            开销
-          </button>
           <div className="menu-wrap">
             <button
               type="button"
@@ -308,9 +286,7 @@ export function DesktopApp() {
           inert={collapsed ? true : undefined}
         >
           <div className="desk__panel-scroll">
-            {side === 'digest' ? (
-              <DigestBoard mode="land" onClose={() => setSide(null)} />
-            ) : isGuideId(side) ? (
+            {isGuideId(side) ? (
               <GuideBoard id={side} mode="desk" onClose={() => setSide(null)} />
             ) : isPrepKind(side) ? (
               <PrepBoard kind={side} mode="desk" onClose={() => setSide(null)} />
@@ -368,8 +344,21 @@ export function DesktopApp() {
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={stage === 'graph'}
-                  className={stage === 'graph' ? 'is-on' : ''}
+                  aria-selected={!expenseOpen && stage === 'overview'}
+                  className={!expenseOpen && stage === 'overview' ? 'is-on' : ''}
+                  data-testid="panel-overview"
+                  onClick={() => choosePanel('overview')}
+                >
+                  <span className="desk-tabs__icon" aria-hidden>
+                    ▣
+                  </span>
+                  概览
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={!expenseOpen && stage === 'graph'}
+                  className={!expenseOpen && stage === 'graph' ? 'is-on' : ''}
                   data-testid="panel-graph"
                   onClick={() => choosePanel('graph')}
                 >
@@ -381,8 +370,8 @@ export function DesktopApp() {
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={stage === 'map'}
-                  className={stage === 'map' ? 'is-on' : ''}
+                  aria-selected={!expenseOpen && stage === 'map'}
+                  className={!expenseOpen && stage === 'map' ? 'is-on' : ''}
                   data-testid="panel-map"
                   onClick={() => choosePanel('map')}
                 >
@@ -390,6 +379,19 @@ export function DesktopApp() {
                     ◎
                   </span>
                   地图
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={expenseOpen}
+                  className={expenseOpen ? 'is-on' : ''}
+                  data-testid="open-expense"
+                  onClick={() => (expenseOpen ? closeExpense() : openExpense())}
+                >
+                  <span className="desk-tabs__icon" aria-hidden>
+                    ¥
+                  </span>
+                  开销
                 </button>
               </div>
               {ui.scope === 'all' && stage === 'graph' ? (
@@ -405,7 +407,7 @@ export function DesktopApp() {
                 </button>
               ) : null}
             </div>
-            {ui.scope === 'day' ? (
+            {stage === 'overview' && !expenseOpen ? null : ui.scope === 'day' ? (
               <DayStrip
                 days={doc.itinerary.days}
                 dayIndex={ui.dayIndex}
@@ -424,6 +426,9 @@ export function DesktopApp() {
           </div>
           <WeatherNotice variant="desk" />
           <div className="desk__stage stage-view">
+            <div className={`view view--front${stage === 'overview' ? '' : ' is-off'}`} data-testid="view-overview">
+              <DigestBoard />
+            </div>
             <div className={`view view--front${stage === 'graph' ? '' : ' is-off'}`} data-testid="view-graph">
               {ui.scope === 'all' ? (
                 <OverviewMatrix

@@ -121,7 +121,7 @@ export function PhoneApp() {
   const [askReset, setAskReset] = useState(false);
   const [desk, setDesk] = useState(false);
   const [railOpen, setRailOpen] = useState(true);
-  const [side, setSide] = useState<null | 'digest' | PrepKind | GuideId>(null);
+  const [side, setSide] = useState<null | PrepKind | GuideId>(null);
   const headerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export function PhoneApp() {
   const first = doc.itinerary.days[0];
   const last = doc.itinerary.days[doc.itinerary.days.length - 1];
   const crossEdges = doc.itinerary.cross_day_edges ?? NO_EDGES;
-  const showRail = land && (side !== null || ui.panel !== 'cost' || Boolean(ui.editor));
+  const showRail = land && (side !== null || (ui.panel !== 'cost' && ui.panel !== 'overview') || Boolean(ui.editor));
   const modalOpen = !land && side === null && (desk || Boolean(ui.selectedId) || Boolean(ui.editor));
 
   const mapDays = useMemo(() => {
@@ -174,15 +174,6 @@ export function PhoneApp() {
   function hideModal() {
     setDesk(false);
     actions.closeDetail();
-  }
-
-  function openDigest() {
-    setMenu(false);
-    actions.closeDetail();
-    setDesk(false);
-    const next = side === 'digest' ? null : 'digest';
-    setSide(next);
-    if (land && next) setRailOpen(true);
   }
 
   const nodePanel = (
@@ -213,6 +204,7 @@ export function PhoneApp() {
         <div className="seg" role="tablist" aria-label="视图">
           {(
             [
+              ['overview', '概览'],
               ['graph', '流程'],
               ['map', '地图'],
               ['cost', '开销'],
@@ -256,15 +248,6 @@ export function PhoneApp() {
         </div>
         <WeatherNotice variant="phone" />
         <div className="header-end">
-          <button
-            type="button"
-            className={`icon-btn${side === 'digest' ? ' is-on' : ''}`}
-            aria-pressed={side === 'digest'}
-            data-testid="open-digest"
-            onClick={openDigest}
-          >
-            汇总信息
-          </button>
           <div className="menu-wrap">
             <button
               type="button"
@@ -386,9 +369,7 @@ export function PhoneApp() {
               {railOpen ? '收起' : '详情'}
             </button>
             <div className="rail-scroll" hidden={!railOpen}>
-              {side === 'digest' ? (
-                <DigestBoard mode="land" onClose={() => setSide(null)} />
-              ) : isGuideId(side) ? (
+              {isGuideId(side) ? (
                 <GuideBoard id={side} mode="land" onClose={() => setSide(null)} />
               ) : isPrepKind(side) ? (
                 <PrepBoard kind={side} mode="land" onClose={() => setSide(null)} />
@@ -400,7 +381,7 @@ export function PhoneApp() {
         ) : null}
 
         <main className="stage">
-          {ui.scope === 'day' ? (
+          {ui.panel === 'overview' ? null : ui.scope === 'day' ? (
             <div className="strip-row">
               <DayStrip
                 days={doc.itinerary.days}
@@ -419,6 +400,9 @@ export function PhoneApp() {
           ) : null}
 
           <div className="stage-view">
+            <div className={`view view--front${ui.panel === 'overview' ? '' : ' is-off'}`} data-testid="view-overview">
+              <DigestBoard />
+            </div>
             <div className={`view view--front${ui.panel === 'graph' ? '' : ' is-off'}`} data-testid="view-graph">
               <FlowBoard
                 days={doc.itinerary.days}
@@ -469,10 +453,6 @@ export function PhoneApp() {
       </div>
 
       {menu ? <button type="button" className="menu-dismiss" aria-label="关闭菜单" onClick={() => setMenu(false)} /> : null}
-
-      <PhoneDialog sheet swipeClose open={!land && side === 'digest'} label="行程汇总" onClose={() => setSide(null)}>
-        <DigestBoard mode="port" onClose={() => setSide(null)} />
-      </PhoneDialog>
 
       <PhoneDialog
         sheet

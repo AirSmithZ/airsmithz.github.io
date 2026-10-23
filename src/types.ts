@@ -114,7 +114,7 @@ export interface Doc {
 }
 
 export type Scope = 'day' | 'all';
-export type PanelId = 'graph' | 'map' | 'cost';
+export type PanelId = 'overview' | 'graph' | 'map' | 'cost';
 export type LayoutLock = 'auto' | 'portrait' | 'landscape';
 
 export interface EditorSession {

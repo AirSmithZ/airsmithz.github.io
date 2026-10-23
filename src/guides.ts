@@ -24,6 +24,18 @@ export interface GuideFigure {
   src: string;
   alt: string;
   caption: string;
+  /** 加载完成前的占位宽高比。手册页默认 3 / 4。 */
+  ratio?: string;
+}
+
+export interface GuideLead {
+  kicker: string;
+  title: string;
+  body: string;
+  href: string;
+  hrefLabel: string;
+  marks: string[];
+  figure: GuideFigure;
 }
 
 export interface GuideStep {
@@ -41,6 +53,8 @@ export interface Guide {
   title: string;
   menuNote: string;
   lede: string;
+  /** 插在步骤前面。已有步骤保持原样。 */
+  lead?: GuideLead;
   steps: GuideStep[];
 }
 
@@ -212,6 +226,20 @@ export const GUIDES: Guide[] = [
     title: '驾车规范',
     menuNote: '新西兰交通局 2024 简体手册，靠左、超车、限速',
     lede: '照片是新西兰交通局 Waka Kotahi《在新西兰驾车》2024 简体中文第 50 到 55 页。笔记正文只有话题标签，字在图上。路上以标志和交通局页面为准。',
+    lead: {
+      kicker: 'KEEP LEFT · 新西兰',
+      title: '出发前，先把路口看明白',
+      body: '这一页是 Keep Left 的自驾场景，给第一次在新西兰开车的人。靠左行驶。环岛怎么进、T 型路口右转该让谁、什么时候打灯、单车道桥谁先过、停车牌和自助加油，都做成了可以暂停、可以换视角的路口，不用注册。下面这张图是其中一个：没有红绿灯的 T 型路口，从支路右转汇进主路。车身上的字母是不同方向，牌子写着 GIVE WAY，意思是让行。出发前先打开这个页面把场景看完，再读下面交通局手册里的靠左、超车、让行和环岛。',
+      href: 'https://keepleft.online/guides/',
+      hrefLabel: '打开 Keep Left 自驾场景',
+      marks: ['可暂停观察', '可切换视角', '无需注册'],
+      figure: {
+        src: 'drive/keepleft/t-right.jpg',
+        alt: 'Keep Left 截图：新西兰 T 型路口右转，支路几辆车停在让行标志前，页面问要让哪个方向的车',
+        caption: 'T 型路口右转。支路一排车停在 GIVE WAY 前面，主路上还有车。页面在问：要让哪个方向的车。',
+        ratio: '1024 / 439',
+      },
+    },
     steps: [
       {
         title: '靠左，时间按路程规划算',

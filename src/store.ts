@@ -60,7 +60,10 @@ function loadUi(doc: Doc): UiState {
   const stored = readJson<Partial<UiState>>(UI_KEY);
   const base = defaultUi();
   if (!stored) return base;
-  const panel: PanelId = stored.panel === 'map' || stored.panel === 'cost' || stored.panel === 'graph' ? stored.panel : 'graph';
+  const panel: PanelId =
+    stored.panel === 'overview' || stored.panel === 'map' || stored.panel === 'cost' || stored.panel === 'graph'
+      ? stored.panel
+      : 'graph';
   const scope: Scope = stored.scope === 'all' ? 'all' : 'day';
   const layoutLock: LayoutLock =
     stored.layoutLock === 'portrait' || stored.layoutLock === 'landscape' || stored.layoutLock === 'auto'

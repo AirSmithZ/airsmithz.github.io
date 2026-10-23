@@ -7,7 +7,10 @@ import { SkeletonImage } from './Skeleton';
 
 export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode; onClose: () => void }) {
   const guide = guideById(id);
-  const figures = useMemo(() => guide.steps.flatMap((step) => step.figures ?? []), [guide]);
+  const figures = useMemo(
+    () => [...(guide.lead ? [guide.lead.figure] : []), ...guide.steps.flatMap((step) => step.figures ?? [])],
+    [guide],
+  );
   const [open, setOpen] = useState<number | null>(null);
   const closeZoom = useCallback(() => setOpen(null), []);
   const shift = useCallback(
@@ -36,6 +39,28 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
           关闭
         </button>
       </header>
+      {guide.lead ? (
+        <article className="guide-lead">
+          <p className="guide-lead__kicker">{guide.lead.kicker}</p>
+          <h3>{guide.lead.title}</h3>
+          <p>{guide.lead.body}</p>
+          <ul className="guide-lead__marks">
+            {guide.lead.marks.map((mark) => (
+              <li key={mark}>{mark}</li>
+            ))}
+          </ul>
+          <a href={guide.lead.href} target="_blank" rel="noreferrer">
+            {guide.lead.hrefLabel}
+          </a>
+          <GuideFigureView
+            figure={guide.lead.figure}
+            onOpen={() => {
+              const at = figures.findIndex((item) => item.src === guide.lead?.figure.src);
+              setOpen(at >= 0 ? at : 0);
+            }}
+          />
+        </article>
+      ) : null}
       <ol className="guide__steps">
         {guide.steps.map((step, index) => (
           <li key={step.title} className="guide__step" style={{ animationDelay: `${index * 40}ms` }}>
@@ -51,24 +76,14 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
                 </a>
               ) : null}
               {step.figures?.map((figure) => (
-                <figure key={figure.src} className="guide-photo">
-                  <button
-                    type="button"
-                    className="guide-photo__open"
-                    aria-label={`放大：${figure.alt}`}
-                    onClick={() => {
-                      const at = figures.findIndex((item) => item.src === figure.src);
-                      setOpen(at >= 0 ? at : 0);
-                    }}
-                  >
-                    <SkeletonImage
-                      src={`${import.meta.env.BASE_URL}${figure.src}`}
-                      alt={figure.alt}
-                      ratio="3 / 4"
-                    />
-                  </button>
-                  <figcaption>{figure.caption}</figcaption>
-                </figure>
+                <GuideFigureView
+                  key={figure.src}
+                  figure={figure}
+                  onOpen={() => {
+                    const at = figures.findIndex((item) => item.src === figure.src);
+                    setOpen(at >= 0 ? at : 0);
+                  }}
+                />
               ))}
               {step.screen ? (
                 <figure className="guide-screen">
@@ -97,6 +112,17 @@ export function GuideBoard({ id, mode, onClose }: { id: GuideId; mode: PrepMode;
         <PhotoZoom figure={figures[open]} index={open} total={figures.length} onShift={shift} onClose={closeZoom} />
       ) : null}
     </section>
+  );
+}
+
+function GuideFigureView({ figure, onOpen }: { figure: GuideFigure; onOpen: () => void }) {
+  return (
+    <figure className="guide-photo">
+      <button type="button" className="guide-photo__open" aria-label={`放大：${figure.alt}`} onClick={onOpen}>
+        <SkeletonImage src={`${import.meta.env.BASE_URL}${figure.src}`} alt={figure.alt} ratio={figure.ratio ?? '3 / 4'} />
+      </button>
+      <figcaption>{figure.caption}</figcaption>
+    </figure>
   );
 }
 
