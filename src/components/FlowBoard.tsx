@@ -206,6 +206,9 @@ export function FlowBoard({
     }
     const el = pagerRef.current;
     if (!el || !daySwipe) return;
+    // 总行程和当天共用这一层。横向滑过的 scrollLeft 会留下来，把当天页带偏。
+    el.scrollLeft = 0;
+    el.scrollTop = 0;
     const apply = () => {
       const next = el.clientWidth;
       setWidth((prev) => (prev === next ? prev : next));
@@ -479,6 +482,7 @@ export function FlowBoard({
       }
       return (
         <div
+          key="day-pager"
           ref={pagerRef}
           className={`day-pager${swipeLocked ? '' : ' day-pager--gesture'}`}
           data-testid="day-flow"
@@ -509,14 +513,14 @@ export function FlowBoard({
       );
     }
     return (
-      <div ref={boardRef} className="board-scroll">
+      <div key="day-scroll" ref={boardRef} className="board-scroll">
         <DayFlow day={day} crossEdges={crossEdges} selectedId={selectedId} onSelect={onSelect} />
       </div>
     );
   }
 
   return (
-    <div ref={boardRef} className="board-scroll board-scroll--columns">
+    <div key="all-columns" ref={boardRef} className="board-scroll board-scroll--columns">
       <div className="columns">
         {days.map((day, index) => {
           const sky = skyFor(day.date);
