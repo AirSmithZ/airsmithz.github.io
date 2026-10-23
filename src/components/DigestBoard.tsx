@@ -5,9 +5,18 @@ export function DigestBoard() {
     <section className="digest digest--stage" aria-label="概览" data-testid="digest-board">
       <div className="digest__sheet">
         <header className="digest__head">
-          <p className="eyebrow">21 天 · 9 段</p>
-          <h2>概览</h2>
-          <p className="fine">2 月 8 日 – 2 月 28 日。3 月 1 日 05:00 落到天府。按当晚住下的地方分段。</p>
+          <p className="digest__kicker">
+            <span>21 天</span>
+            <span aria-hidden="true">·</span>
+            <span>9 段</span>
+          </p>
+          <div className="digest__mast">
+            <h2>概览</h2>
+            <p className="digest__lede">
+              <span>2 月 8 日 – 2 月 28 日。3 月 1 日 05:00 落到天府。</span>
+              <span>按当晚住下的地方分段。</span>
+            </p>
+          </div>
         </header>
         <ol className="digest__stops">
           {DIGEST_STOPS.map((stop, index) => (

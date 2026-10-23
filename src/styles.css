@@ -2289,19 +2289,47 @@ button {
 .digest__sheet {
   width: min(1040px, 100%);
 }
-.digest--stage h2 {
-  font-size: clamp(34px, 5vw, 56px);
-  line-height: 0.95;
-}
 .digest--stage .digest__head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  position: static;
   display: block;
-  margin: 0 0 16px;
-  padding: 12px 0 10px;
-  background: linear-gradient(180deg, var(--bg-base) 72%, transparent);
+  margin: 2px 0 18px;
+  padding: 2px 0 14px;
+  background: none;
+  border-bottom: 1px solid var(--border);
 }
+.digest__kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--accent);
+}
+.digest__kicker::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--accent);
+  flex: none;
+}
+.digest__mast { min-width: 0; }
+.digest--stage h2 {
+  font-size: clamp(36px, 5vw, 52px);
+  line-height: 1.15;
+}
+.digest__lede {
+  display: grid;
+  gap: 2px;
+  margin: 8px 0 0;
+  max-width: 36em;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.digest__lede span:last-child { color: var(--text-dim); }
 .digest--stage .digest__stops {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
