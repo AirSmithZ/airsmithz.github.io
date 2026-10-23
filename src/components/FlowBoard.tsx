@@ -200,6 +200,10 @@ export function FlowBoard({
   const daySwipe = swipeDays && scope === 'day';
 
   useLayoutEffect(() => {
+    if (!daySwipe) {
+      setDrag((prev) => (prev == null ? prev : null));
+      phase.current = 'idle';
+    }
     const el = pagerRef.current;
     if (!el || !daySwipe) return;
     const apply = () => {
@@ -332,7 +336,10 @@ export function FlowBoard({
         phase.current = 'idle';
         return;
       }
-      if (page) page.scrollTop = savedTop;
+      if (page) {
+        page.scrollTop = savedTop;
+        page.scrollLeft = 0;
+      }
       if (axis !== 'x') {
         glide.release();
         phase.current = 'idle';

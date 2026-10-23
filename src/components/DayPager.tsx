@@ -200,7 +200,10 @@ export function DayPager({
         phase.current = 'idle';
         return;
       }
-      if (page) page.scrollTop = savedTop;
+      if (page) {
+        page.scrollTop = savedTop;
+        page.scrollLeft = 0;
+      }
       if (axis !== 'x') {
         glide.release();
         phase.current = 'idle';

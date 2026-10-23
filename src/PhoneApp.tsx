@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { actions, useTrip } from './store';
 import { formatTripSpan } from './trip';
 import { DayStrip } from './components/DayStrip';
@@ -287,6 +287,26 @@ export function PhoneApp() {
   const [railOpen, setRailOpen] = useState(true);
   const [side, setSide] = useState<null | PrepKind | GuideId>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    const row = stripRef.current;
+    if (!stage || !row || ui.scope !== 'day' || ui.panel === 'overview') return;
+    const chip = row.querySelector<HTMLElement>('.day-chip');
+    if (!chip) return;
+    const apply = () => {
+      const styles = getComputedStyle(row);
+      const pad = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+      const next = Math.ceil(chip.getBoundingClientRect().height + pad);
+      if (next > 0) stage.style.setProperty('--strip-h', `${next}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(chip);
+    return () => observer.disconnect();
+  }, [ui.scope, ui.panel, ui.dayIndex]);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -502,24 +522,25 @@ export function PhoneApp() {
           </aside>
         ) : null}
 
-        <main className="stage">
-          {ui.panel === 'overview' ? null : ui.scope === 'day' ? (
-            <div className="strip-row">
-              <DayStrip
-                days={doc.itinerary.days}
-                dayIndex={ui.dayIndex}
-                locked={Boolean(ui.editor)}
-                onPick={(index) => actions.setDay(index)}
-              />
+        <main className="stage" ref={stageRef}>
+          {ui.panel === 'overview' ? null : (
+            <div className="strip-row" ref={stripRef}>
+              {ui.scope === 'day' ? (
+                <DayStrip
+                  days={doc.itinerary.days}
+                  dayIndex={ui.dayIndex}
+                  locked={Boolean(ui.editor)}
+                  onPick={(index) => actions.setDay(index)}
+                />
+              ) : (
+                <p className="strip-note">
+                  {ui.panel === 'cost'
+                    ? `总行程 ${doc.itinerary.days.length} 天。`
+                    : `总行程 ${doc.itinerary.days.length} 天。点列头只是换到那天看，日期本身不能改。${day ? ` 当前 D${day.day_index} ${day.region ?? ''}。` : ''}`}
+                </p>
+              )}
             </div>
-          ) : ui.panel !== 'cost' ? (
-            <div className="strip-row">
-              <p className="strip-note">
-                总行程 {doc.itinerary.days.length} 天。点列头只是换到那天看，日期本身不能改。
-                {day ? ` 当前 D${day.day_index} ${day.region ?? ''}。` : ''}
-              </p>
-            </div>
-          ) : null}
+          )}
 
           <div className="stage-view">
             {land || !showScope ? null : <ScopeTabs rail scope={ui.scope} onChoose={chooseScope} />}
