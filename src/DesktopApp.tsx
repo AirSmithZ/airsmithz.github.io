@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type PointerE
 import { capturePointer } from './compat';
 import { createPortal } from 'react-dom';
 import { actions, useTrip } from './store';
+import { formatTripSpan } from './trip';
 import { DayStrip } from './components/DayStrip';
 import { WeatherNotice } from './components/WeatherNotice';
 import { DigestBoard } from './components/DigestBoard';
@@ -118,8 +119,6 @@ export function DesktopApp() {
   const stage = ui.panel === 'cost' ? held.current : ui.panel;
 
   const day = doc.itinerary.days[ui.dayIndex];
-  const first = doc.itinerary.days[0];
-  const last = doc.itinerary.days[doc.itinerary.days.length - 1];
   const crossEdges = doc.itinerary.cross_day_edges ?? NO_EDGES;
   const expenseOpen = ui.panel === 'cost';
 
@@ -175,8 +174,7 @@ export function DesktopApp() {
           <div>
             <h1 className="desk__title">澳新行程</h1>
             <p className="desk__subtitle">
-              {first ? `${first.date.slice(5)} – ${last.date.slice(5)}` : '没有日期'}
-              {doc.origin === 'local' ? ' · 本机已改' : ' · 初始数据'}
+              {formatTripSpan(doc.itinerary.days)}
             </p>
           </div>
         </div>
@@ -192,11 +190,6 @@ export function DesktopApp() {
             </button>
             {menu ? (
               <div className="menu" role="menu">
-                <p className="menu-note">
-                  {doc.origin === 'seed'
-                    ? '还没改过。这台电脑没有存档时，用初始信息。'
-                    : `存在这台电脑里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
-                </p>
                 <button
                   type="button"
                   data-testid="open-todo"

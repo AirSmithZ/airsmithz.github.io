@@ -132,6 +132,13 @@ button {
 .scope { order: 4; }
 .header-end { order: 5; }
 
+.header-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
 .is-land .header {
   flex-wrap: nowrap;
   padding-block: 6px;
@@ -157,18 +164,64 @@ button {
   margin-right: auto;
   min-width: 0;
 }
-/* 竖屏标题让出右侧，告警图标才能和流程、地图、开销留在同一排。 */
-.is-port .brand {
-  flex: 1 1 0;
-  margin-right: 0;
-  min-width: 6.6rem;
+/* 竖屏：标题一行，下面「概览」那排铺满，更多贴在这排最右。 */
+.is-port .header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand tools"
+    "views more";
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 8px;
+  padding: 10px 12px 10px;
 }
-.is-port .brand h1 { white-space: nowrap; }
-.is-port .brand small {
-  display: block;
+.is-port .brand {
+  grid-area: brand;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-self: center;
+  margin: 0;
+  min-width: 0;
+}
+.is-port .brand .eyebrow {
+  flex: 1 0 100%;
+  margin: 0;
+}
+.is-port .header-tools { display: contents; }
+.is-port .wx-alert { grid-area: tools; justify-self: end; }
+.is-port .header-end { grid-area: more; justify-self: end; align-self: center; }
+.is-port .view-bar {
+  grid-area: views;
+  width: 100%;
+  min-width: 0;
+}
+.is-port .view-bar button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
+}
+.is-port .brand h1 {
+  flex: none;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  font-size: 18px;
+  line-height: 1;
+}
+.is-port .brand small {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--text-muted);
 }
 .is-land .brand { flex: none; margin-right: 4px; }
 .is-short .brand small,
@@ -285,7 +338,64 @@ button {
   flex: none;
 }
 .header-end .icon-btn {
-  white-space: nowrap;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+.header-end .icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.is-short .header-end .icon-btn,
+.is-land .header-end .icon-btn {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+.is-short .header-end .icon-btn svg,
+.is-land .header-end .icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 竖屏范围绝对贴在内容左侧，盖在画面上。竖滑时淡出，停下再淡回。 */
+.is-port .scope--rail {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 8px;
+  translate: 0 -50%;
+  flex-direction: column;
+  width: 44px;
+  padding: 3px;
+  border-radius: 22px;
+  opacity: 1;
+  background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  transition: opacity 320ms ease;
+}
+.is-port .scope--rail.is-dim {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.is-port .scope--rail button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+}
+.is-port .scope--rail svg {
+  width: 18px;
+  height: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .is-port .scope--rail { transition: none; }
 }
 
 .menu {
@@ -304,7 +414,7 @@ button {
   box-shadow: var(--shadow);
 }
 
-/* 竖屏「更多」贴在标题栏右侧。菜单若跟按钮走、再取 88vw，
+/* 竖屏「更多」在视图排最右。菜单若跟按钮走、再取 88vw，
    左缘会冲出屏幕，被 .shell 的 overflow:hidden 裁掉。改挂到整条 header 上。 */
 .is-port .menu-wrap { position: static; }
 

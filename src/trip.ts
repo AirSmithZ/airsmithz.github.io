@@ -170,6 +170,34 @@ export function applyPlaceNode(
 
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
+function monthDay(iso: string): string {
+  const [, month, day] = iso.split('-');
+  return `${Number(month)}月${Number(day)}日`;
+}
+
+/** 顶栏跨度。最后一天若有节点跨过午夜，结束日算到次日（回程落到天府）。 */
+export function formatTripSpan(days: DayPlan[]): string {
+  const first = days[0];
+  const last = days[days.length - 1];
+  if (!first || !last) return '没有日期';
+  let end = last.date;
+  let latest = -1;
+  for (const node of last.nodes) {
+    if (!node.start_time) continue;
+    const [hour, minute] = node.start_time.split(':').map((part) => Number.parseInt(part, 10));
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
+    const clock = hour * 60 + minute;
+    if (latest >= 0 && clock + 6 * 60 < latest) {
+      end = nextCalendarDay(last.date).date;
+      break;
+    }
+    if (clock > latest) latest = clock;
+  }
+  const startLabel = monthDay(first.date);
+  const endLabel = monthDay(end);
+  return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+}
+
 function nextCalendarDay(iso: string): { date: string; weekday: string } {
   const [year, month, day] = iso.split('-').map((part) => Number.parseInt(part, 10));
   const stamp = new Date(Date.UTC(year, month - 1, day));

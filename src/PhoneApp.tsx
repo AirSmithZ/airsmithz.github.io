@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { actions, useTrip } from './store';
+import { formatTripSpan } from './trip';
 import { DayStrip } from './components/DayStrip';
 import { WeatherNotice } from './components/WeatherNotice';
 import { DigestBoard } from './components/DigestBoard';
@@ -17,6 +18,169 @@ import type { PanelId, Scope, TripEdge } from './types';
 const TripMap = lazy(() => import('./components/TripMap').then((mod) => ({ default: mod.TripMap })));
 
 const NO_EDGES: TripEdge[] = [];
+
+const PANELS: { id: PanelId; label: string }[] = [
+  { id: 'overview', label: '概览' },
+  { id: 'graph', label: '流程' },
+  { id: 'map', label: '地图' },
+  { id: 'cost', label: '开销' },
+];
+
+function PanelTabs({
+  panel,
+  onChoose,
+  className,
+}: {
+  panel: PanelId;
+  onChoose: (panel: PanelId) => void;
+  className?: string;
+}) {
+  return (
+    <div className={className ? `seg ${className}` : 'seg'} role="tablist" aria-label="视图">
+      {PANELS.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="tab"
+          aria-selected={panel === item.id}
+          className={panel === item.id ? 'is-on' : ''}
+          data-testid={`panel-${item.id}`}
+          onClick={() => onChoose(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ScopeMark({ kind }: { kind: 'day' | 'all' }) {
+  if (kind === 'day') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="5.5" y="4.5" width="13" height="15" rx="2.2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M5.5 9.2h13" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="5" y="4.2" width="14" height="3.4" rx="1.1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="5" y="10.3" width="14" height="3.4" rx="1.1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="5" y="16.4" width="14" height="3.4" rx="1.1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function ScopeTabs({
+  scope,
+  onChoose,
+  rail = false,
+}: {
+  scope: Scope;
+  onChoose: (scope: Scope) => void;
+  rail?: boolean;
+}) {
+  const railRef = useRef<HTMLDivElement>(null);
+  const [dim, setDim] = useState(false);
+
+  useEffect(() => {
+    if (!rail) return;
+    const node = railRef.current;
+    const root = node?.closest('.stage-view');
+    if (!node || !root) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let timer = 0;
+    let dimmed = false;
+    let tracking = false;
+    let lastY = 0;
+    const tops = new WeakMap<EventTarget, number>();
+
+    const arm = () => {
+      if (!dimmed) {
+        dimmed = true;
+        setDim(true);
+      }
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        dimmed = false;
+        setDim(false);
+      }, 220);
+    };
+
+    const onScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !root.contains(target) || node.contains(target)) return;
+      const top = target.scrollTop;
+      const prev = tops.get(target);
+      tops.set(target, top);
+      if (prev === undefined || prev === top) return;
+      arm();
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!(event.target instanceof Node) || !root.contains(event.target) || node.contains(event.target)) return;
+      tracking = true;
+      lastY = event.clientY;
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!tracking) return;
+      if (Math.abs(event.clientY - lastY) < 10) return;
+      lastY = event.clientY;
+      arm();
+    };
+    const onPointerUp = () => {
+      tracking = false;
+    };
+
+    document.addEventListener('scroll', onScroll, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointermove', onPointerMove, true);
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('pointercancel', onPointerUp, true);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('scroll', onScroll, true);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('pointermove', onPointerMove, true);
+      document.removeEventListener('pointerup', onPointerUp, true);
+      document.removeEventListener('pointercancel', onPointerUp, true);
+    };
+  }, [rail]);
+
+  return (
+    <div
+      ref={rail ? railRef : undefined}
+      className={rail ? `scope scope--rail${dim ? ' is-dim' : ''}` : 'scope'}
+      role="tablist"
+      aria-label="范围"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={scope === 'day'}
+        aria-label={rail ? '当天' : undefined}
+        className={scope === 'day' ? 'is-on' : ''}
+        data-testid="scope-day"
+        onClick={() => onChoose('day')}
+      >
+        {rail ? <ScopeMark kind="day" /> : '当天'}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={scope === 'all'}
+        aria-label={rail ? '总行程' : undefined}
+        className={scope === 'all' ? 'is-on' : ''}
+        data-testid="scope-all"
+        onClick={() => onChoose('all')}
+      >
+        {rail ? <ScopeMark kind="all" /> : '总行程'}
+      </button>
+    </div>
+  );
+}
 
 interface DeviceBox {
   w: number;
@@ -145,8 +309,6 @@ export function PhoneApp() {
   usePortraitEdgeGuard(!land);
   const short = box.h < 460;
   const day = doc.itinerary.days[ui.dayIndex];
-  const first = doc.itinerary.days[0];
-  const last = doc.itinerary.days[doc.itinerary.days.length - 1];
   const crossEdges = doc.itinerary.cross_day_edges ?? NO_EDGES;
   const showRail = land && (side !== null || (ui.panel !== 'cost' && ui.panel !== 'overview') || Boolean(ui.editor));
   const modalOpen = !land && side === null && (desk || Boolean(ui.selectedId) || Boolean(ui.editor));
@@ -176,6 +338,8 @@ export function PhoneApp() {
     actions.closeDetail();
   }
 
+  const showScope = ui.panel !== 'overview';
+
   const nodePanel = (
     <NodePanel
       doc={doc}
@@ -193,78 +357,34 @@ export function PhoneApp() {
     >
       <header className="header" ref={headerRef}>
         <div className="header-scroll">
-        <div className="brand">
-          <p className="eyebrow">ANZ</p>
-          <h1>澳新行程</h1>
-          <small>
-            {first ? `${first.date.slice(5)} – ${last.date.slice(5)}` : '没有日期'}
-            {doc.origin === 'local' ? ' · 本机已改' : ' · 初始数据'}
-          </small>
+          <div className="brand">
+            <p className="eyebrow">ANZ</p>
+            <h1>澳新行程</h1>
+            <small>{formatTripSpan(doc.itinerary.days)}</small>
+          </div>
+          {land ? <PanelTabs panel={ui.panel} onChoose={choosePanel} /> : null}
+          {land && showScope ? <ScopeTabs scope={ui.scope} onChoose={chooseScope} /> : null}
         </div>
-        <div className="seg" role="tablist" aria-label="视图">
-          {(
-            [
-              ['overview', '概览'],
-              ['graph', '流程'],
-              ['map', '地图'],
-              ['cost', '开销'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={ui.panel === id}
-              className={ui.panel === id ? 'is-on' : ''}
-              data-testid={`panel-${id}`}
-              onClick={() => choosePanel(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="scope" role="tablist" aria-label="范围">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={ui.scope === 'day'}
-            className={ui.scope === 'day' ? 'is-on' : ''}
-            data-testid="scope-day"
-            onClick={() => chooseScope('day')}
-          >
-            当天
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={ui.scope === 'all'}
-            className={ui.scope === 'all' ? 'is-on' : ''}
-            data-testid="scope-all"
-            onClick={() => chooseScope('all')}
-          >
-            总行程
-          </button>
-        </div>
-        </div>
-        <WeatherNotice variant="phone" />
-        <div className="header-end">
-          <div className="menu-wrap">
-            <button
-              type="button"
-              className="icon-btn"
-              aria-expanded={menu}
-              onClick={() => setMenu((open) => !open)}
-            >
-              更多
-            </button>
-          {menu && (
-            <div className="menu" role="menu">
-              <p className="menu-note">
-                {doc.origin === 'seed'
-                  ? '还没改过。这台手机没有存档时，用初始信息。'
-                  : `存在这台手机里。上次写入 ${doc.savedAt ? doc.savedAt.slice(0, 16).replace('T', ' ') : '刚刚'}。`}
-              </p>
+        <div className="header-tools">
+          <WeatherNotice variant="phone" />
+          <div className="header-end">
+            <div className="menu-wrap">
               <button
+                type="button"
+                className={`icon-btn${menu ? ' is-on' : ''}`}
+                aria-label="更多"
+                aria-expanded={menu}
+                onClick={() => setMenu((open) => !open)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="5.5" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="18.5" r="1.5" fill="currentColor" />
+                </svg>
+              </button>
+              {menu && (
+                <div className="menu" role="menu">
+                  <button
                 type="button"
                 data-testid="open-todo"
                 onClick={() => {
@@ -347,10 +467,12 @@ export function PhoneApp() {
               >
                 恢复初始行程
               </button>
+                </div>
+              )}
             </div>
-          )}
           </div>
         </div>
+        {land ? null : <PanelTabs className="view-bar" panel={ui.panel} onChoose={choosePanel} />}
       </header>
 
       {landBlocked ? <p className="hint-line">屏幕太窄，横版左栏放不下，先用竖版弹框。</p> : null}
@@ -400,6 +522,7 @@ export function PhoneApp() {
           ) : null}
 
           <div className="stage-view">
+            {land || !showScope ? null : <ScopeTabs rail scope={ui.scope} onChoose={chooseScope} />}
             <div className={`view view--front${ui.panel === 'overview' ? '' : ' is-off'}`} data-testid="view-overview">
               <DigestBoard />
             </div>

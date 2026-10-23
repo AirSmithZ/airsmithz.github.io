@@ -13,7 +13,7 @@ export function DigestBoard() {
           <div className="digest__mast">
             <h2>概览</h2>
             <p className="digest__lede">
-              <span>2 月 8 日 – 2 月 28 日。3 月 1 日 05:00 落到天府。</span>
+              <span>3 月 1 日 05:00 落到天府。</span>
               <span>按当晚住下的地方分段。</span>
             </p>
           </div>
