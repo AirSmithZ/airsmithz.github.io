@@ -263,7 +263,7 @@ function Day2() {
   )
 }
 
-function Speak({ bare = false }: { bare?: boolean }) {
+function Speak({ bare = false, editable = false }: { bare?: boolean; editable?: boolean }) {
   return (
     <article className="speak-page">
       {bare ? null : (
@@ -274,7 +274,7 @@ function Speak({ bare = false }: { bare?: boolean }) {
           </p>
         </>
       )}
-      <Speeches />
+      <Speeches editable={editable} />
     </article>
   )
 }
@@ -325,7 +325,7 @@ function Phone() {
       </nav>
       <main>
         {section === "speak" ? (
-          <Speak bare />
+          <Speak bare editable />
         ) : (
           <article className="day">
             <CallSheet
