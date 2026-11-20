@@ -1,0 +1,1072 @@
+@import "tailwindcss";
+
+:root {
+  --daylight: #d5e0ea;
+  --paper: #f4f7fa;
+  --tower: #243038;
+  --glass: #3e6b7a;
+  --gauze: #d7c4b0;
+  --missing: #9d2c2c;
+  --line: #c5d2dc;
+  --rail: #6d8794;
+  --quiet: #3e515b;
+  --tone-bride: #8e3148;
+  --tone-groom: #1a5c72;
+  --tone-linxi: #8a5524;
+  --tone-summer: #1c6a44;
+  --tone-hua: #7a3564;
+  --tone-xin: #3d5c6e;
+  --tone-sister: #58448a;
+  --tone-momw: #9a4034;
+  --tone-momm: #2e4f86;
+  --tone-dad: #3a4e5c;
+  --tone-zeng: #0b655e;
+  --tone-spark: #8f5418;
+  --tone-li: #8a3e2a;
+  --tone-hu: #1a6a62;
+  --tone-huang: #53408a;
+  --tone-tang: #6a3874;
+  --tone-booth: #1a5f78;
+  --tone-siniang: #8a2e44;
+  --tone-aunt: #2a3d96;
+  --tone-yanwen: #7d6200;
+  --tone-baijiu: #7e1b32;
+  --tone-guest: #4e5e68;
+  --tone-parents: #3f5c48;
+  --tone-nian: #5c4322;
+  --music-dusk: #9a6b2e;
+  --music-dusk-wash: #f3e6cf;
+  --music-entrance: #1f6a58;
+  --music-entrance-wash: #d5ebe4;
+  --music-river: #3a6284;
+  --music-river-wash: #d8e5ef;
+  --music-better: #8a3d52;
+  --music-better-wash: #f0dde3;
+  color-scheme: light;
+  --chart-background: var(--paper);
+  --chart-foreground: var(--tower);
+  --chart-foreground-muted: #5c6b74;
+  --chart-label: var(--tower);
+  --chart-line-primary: var(--glass);
+  --chart-line-secondary: #8aa0b2;
+  --chart-crosshair: var(--glass);
+  --chart-grid: #d5dee6;
+  --chart-indicator-color: var(--glass);
+  --chart-indicator-secondary-color: #8aa0b2;
+  --chart-marker-background: var(--paper);
+  --chart-marker-border: var(--glass);
+  --chart-marker-foreground: var(--tower);
+  --chart-marker-badge-background: var(--glass);
+  --chart-marker-badge-foreground: var(--paper);
+  --chart-tooltip-background: var(--paper);
+  --foreground: var(--tower);
+  --chart-1: var(--glass);
+  --chart-2: #8aa0b2;
+  --chart-3: var(--gauze);
+  --chart-4: var(--tower);
+  --chart-5: var(--missing);
+  color: var(--tower);
+  background: var(--daylight);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+[data-theme="dark"] {
+  --daylight: #141c22;
+  --paper: #1e2a32;
+  --tower: #e7eef3;
+  --glass: #8ec4d4;
+  --gauze: #c4ae98;
+  --missing: #e08a84;
+  --line: #3a4e5c;
+  --rail: #8aa0ae;
+  --quiet: #b7c6d0;
+  --tone-bride: #f3a8b8;
+  --tone-groom: #8ec4d4;
+  --tone-linxi: #e4c09a;
+  --tone-summer: #8ed4ae;
+  --tone-hua: #e8b0d4;
+  --tone-xin: #b7d0de;
+  --tone-sister: #c8b6f2;
+  --tone-momw: #f0b0a4;
+  --tone-momm: #a8c2f2;
+  --tone-dad: #c5d4de;
+  --tone-zeng: #7ee0d6;
+  --tone-spark: #f0c088;
+  --tone-li: #f0b0a0;
+  --tone-hu: #8ed8cc;
+  --tone-huang: #c8b6f4;
+  --tone-tang: #e4b0e6;
+  --tone-booth: #9ad4e8;
+  --tone-siniang: #f0a8b8;
+  --tone-aunt: #b7c2f6;
+  --tone-yanwen: #f0d48a;
+  --tone-baijiu: #f3829a;
+  --tone-guest: #b7c6d0;
+  --tone-parents: #b8d4be;
+  --tone-nian: #e4d0b0;
+  --music-dusk: #e0b56a;
+  --music-dusk-wash: #3a3224;
+  --music-entrance: #7ecbb4;
+  --music-entrance-wash: #1e3330;
+  --music-river: #8eb4d4;
+  --music-river-wash: #24323c;
+  --music-better: #e0a0b2;
+  --music-better-wash: #3a2830;
+  --chart-foreground-muted: #9aafba;
+  --chart-line-secondary: #6e95a4;
+  --chart-grid: #35505e;
+  --chart-indicator-secondary-color: #6e95a4;
+  --chart-2: #6e95a4;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--daylight);
+}
+
+button, input { font: inherit; color: inherit; }
+
+.shell {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  min-height: 100vh;
+  padding: 1.25rem 1.25rem 2.5rem;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+}
+
+.rail button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: 0.55rem 0.2rem 0.55rem 0.7rem;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  color: var(--rail);
+  white-space: nowrap;
+}
+
+.rail button.on {
+  color: var(--tower);
+  box-shadow: inset 3px 0 0 var(--glass);
+}
+
+.rail button.theme {
+  margin-top: 1.2rem;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+}
+
+.rail button.theme[aria-pressed="true"] {
+  color: var(--glass);
+  box-shadow: none;
+}
+
+.rail button:focus-visible {
+  outline: 2px solid var(--glass);
+  outline-offset: 3px;
+}
+
+main {
+  background: var(--paper);
+  padding: 2.2rem 2.4rem 2.6rem;
+  min-width: 0;
+  min-height: 100%;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  font-weight: 400;
+  vertical-align: baseline;
+  padding: 0.38rem 1.4rem 0.38rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+th:first-child,
+td:first-child,
+th:last-child,
+td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+th:last-child,
+td:last-child {
+  text-align: right;
+  padding-right: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+tbody th {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.2rem;
+}
+
+article > ul {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+}
+
+article > ul li {
+  display: grid;
+  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
+  gap: 0.5rem 1.6rem;
+  align-items: baseline;
+  padding: 0.34rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+article > ul span { color: var(--quiet); }
+
+.cue .note,
+.cue .watch {
+  max-width: none;
+}
+
+h1, h2 {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+h1 { font-size: 2.15rem; max-width: 16em; }
+h2 { font-size: 1.45rem; margin-top: 2.2rem; }
+
+p {
+  max-width: 38em;
+  margin: 0.8rem 0 1.1rem;
+}
+
+.chart-host {
+  width: 100%;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.ledger {
+  margin: 0.7rem 0 0.3rem;
+}
+
+.ledger ul {
+  margin: 0;
+}
+
+.ledger li {
+  display: grid;
+  grid-template-columns: 5.2rem minmax(0, 1fr) 6.2rem;
+  align-items: center;
+  gap: 0.75rem;
+  border: 0;
+  padding: 0.32rem 0;
+}
+
+.ledger .name,
+.ledger .amt { color: var(--tower); }
+
+.ledger .name {
+  font-size: 0.98rem;
+}
+
+.ledger .track {
+  position: relative;
+  height: 8px;
+  background: var(--line);
+}
+
+.ledger .fill,
+.ledger .extra {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.ledger .fill { left: 0; background: var(--glass); }
+.ledger .extra { background: var(--gauze); }
+
+.ledger .amt {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.45rem;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0;
+  color: var(--quiet);
+}
+
+.legend .swatch {
+  width: 1.5rem;
+  height: 8px;
+  background: var(--gauze);
+  flex: none;
+}
+
+.call { margin: 0.15rem 0 0.2rem; }
+
+.part-tabs {
+  display: flex;
+  gap: 0.15rem;
+  margin: 0 0 0.1rem;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.part-tabs button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.28rem;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  color: var(--rail);
+  padding: 0.2rem 0.65rem 0.32rem;
+  margin-bottom: -1px;
+  box-shadow: inset 0 -2px 0 transparent;
+  flex: none;
+}
+
+.part-tabs button[aria-selected="true"] {
+  color: var(--tower);
+  box-shadow: inset 0 -2px 0 var(--glass);
+}
+
+.part-tabs button:focus-visible {
+  outline: 2px solid var(--glass);
+  outline-offset: 2px;
+}
+
+.shell:has(.day) {
+  padding-top: 0.5rem;
+  padding-bottom: 0.45rem;
+}
+
+main:has(.day) {
+  padding-top: 0.7rem;
+  padding-bottom: 0.45rem;
+}
+
+.day h1 { font-size: 1.45rem; }
+
+.day > p {
+  max-width: none;
+  margin: 0.08rem 0 0.2rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.sheet {
+  columns: 3;
+  column-gap: 1.75rem;
+}
+
+.cue {
+  break-inside: avoid;
+  padding: 0.55rem 0.55rem 0.62rem 0.7rem;
+  margin: 0 -0.55rem;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  line-height: 1.45;
+}
+
+.cue[data-music="dusk"] {
+  --music: var(--music-dusk);
+  background: color-mix(in srgb, var(--music-dusk-wash) 72%, transparent);
+  border-left-color: var(--music-dusk);
+}
+
+.cue[data-music="entrance"] {
+  --music: var(--music-entrance);
+  background: color-mix(in srgb, var(--music-entrance-wash) 72%, transparent);
+  border-left-color: var(--music-entrance);
+}
+
+.cue[data-music="river"] {
+  --music: var(--music-river);
+  background: color-mix(in srgb, var(--music-river-wash) 72%, transparent);
+  border-left-color: var(--music-river);
+}
+
+.cue[data-music="better"] {
+  --music: var(--music-better);
+  background: color-mix(in srgb, var(--music-better-wash) 72%, transparent);
+  border-left-color: var(--music-better);
+}
+
+.cue[data-part="eve"] {
+  background: color-mix(in srgb, var(--daylight) 55%, transparent);
+  border-left-color: var(--glass);
+}
+
+.cue[data-part="eve"] time {
+  color: var(--glass);
+}
+
+.cue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.08rem 0.45rem;
+}
+
+.cue-body {
+  display: block;
+  margin-top: 0.32rem;
+}
+
+.cue time {
+  flex: none;
+  white-space: nowrap;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  color: var(--tower);
+}
+
+.cue time span {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 0.72rem;
+  color: var(--quiet);
+}
+
+.cue time .guess {
+  margin-left: 0.28rem;
+}
+
+.cue.lock time { color: var(--glass); }
+
+.cue h3 {
+  margin: 0;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.02rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.cue .place,
+.cue .note,
+.cue .track,
+.cue .contact {
+  margin: 0;
+}
+
+.cue .track {
+  display: block;
+  margin: 0.08rem 0 0;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 0.86rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  color: var(--music, var(--glass));
+}
+
+.cue .place {
+  margin-left: 0.5rem;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 0.82rem;
+  color: var(--quiet);
+}
+
+.cue .note {
+  display: block;
+  margin: 0.12rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.cue .watch {
+  display: block;
+  margin: 0.12rem 0 0;
+  padding-left: 0.35rem;
+  border-left: 2px solid var(--missing);
+  color: var(--missing);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.prep h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-top: 0.7rem;
+  font-size: 1.2rem;
+}
+
+.prep h2 .count {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 0.92rem;
+  letter-spacing: 0;
+  color: var(--quiet);
+}
+
+.prep ul {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prep li { border-bottom: 1px solid var(--line); }
+
+.prep label {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.08rem 0.55rem;
+  align-items: start;
+  padding: 0.32rem 0 0.36rem;
+  cursor: pointer;
+}
+
+.prep input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+}
+
+.prep .mark {
+  width: 0.72rem;
+  height: 0.72rem;
+  margin-top: 0.28rem;
+  border: 1.5px solid var(--tower);
+  border-radius: 1px;
+  justify-self: center;
+  position: relative;
+}
+
+.prep input:focus-visible + .mark {
+  outline: 2px solid var(--glass);
+  outline-offset: 2px;
+}
+
+.prep strong {
+  display: block;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.12rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.prep .note {
+  display: block;
+  margin-top: 0.04rem;
+  max-width: 62em;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.prep li.done { color: var(--quiet); }
+
+.prep li.done .mark { border-color: var(--quiet); }
+
+.prep li.done .mark::after {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 0.02rem;
+  width: 0.2rem;
+  height: 0.38rem;
+  border: solid var(--quiet);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+
+.prep.pack h2 {
+  margin: 0.9rem 0 0.15rem;
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+}
+
+.prep.pack ul {
+  margin-top: 0.35rem;
+}
+
+.prep.pack li { break-inside: avoid; }
+
+.prep.pack label {
+  grid-template-columns: 1.2rem minmax(0, 1fr);
+  column-gap: 0.85rem;
+  padding: 0.78rem 0 0.82rem;
+}
+
+.prep.pack .mark {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-top: 0.18rem;
+  border: 1.5px solid var(--glass);
+  border-radius: 2px;
+  background: transparent;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.prep.pack strong {
+  font-size: 1.28rem;
+  line-height: 1.25;
+  color: var(--tower);
+}
+
+.prep.pack .note {
+  margin-top: 0.16rem;
+  max-width: 36em;
+  color: var(--quiet);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.prep.pack li.done .mark {
+  background: var(--glass);
+  border-color: var(--glass);
+}
+
+.prep.pack li.done .mark::after {
+  left: 0.32rem;
+  top: 0.12rem;
+  width: 0.28rem;
+  height: 0.5rem;
+  border-color: var(--paper);
+  border-width: 0 2px 2px 0;
+}
+
+.prep.pack li.done strong,
+.prep.pack li.done .note { color: var(--quiet); }
+
+@media (min-width: 960px) {
+  .prep.pack ul {
+    columns: 2;
+    column-gap: 2.8rem;
+  }
+}
+
+.roster label {
+  grid-template-columns: 1rem 4.8rem minmax(8.5rem, 12rem) minmax(0, 1fr);
+  gap: 0.16rem 0.75rem;
+  align-items: baseline;
+}
+
+.roster time {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 0.98rem;
+  line-height: 1.35;
+  color: var(--tower);
+  white-space: nowrap;
+}
+
+.roster time .guess {
+  margin-left: 0.28rem;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 0.72rem;
+  color: var(--quiet);
+}
+
+.roster .who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.45rem;
+}
+
+.roster .place {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 0.82rem;
+  color: var(--quiet);
+}
+
+.roster .reach {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.roster .reach a {
+  margin-right: 0.35rem;
+  color: var(--glass);
+  font-variant-numeric: tabular-nums;
+}
+
+.roster .gap { color: var(--missing); }
+
+.roster li.done time,
+.roster li.done .place,
+.roster li.done .reach,
+.roster li.done .reach a,
+.roster li.done .tag {
+  color: var(--quiet);
+  background: transparent;
+}
+
+.cue .k {
+  margin-right: 0.55rem;
+  color: var(--quiet);
+}
+
+.cue .contact.gap,
+.cue .contact.gap .k { color: var(--missing); }
+
+.seats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.28rem 0.7rem;
+  margin: 0.22rem 0 0;
+  padding: 0;
+}
+
+.seats li {
+  --person: var(--tower);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.06rem 0.28rem;
+  max-width: 100%;
+  border: 0;
+  padding: 0;
+}
+
+.seats li:has(.marks) { flex-basis: 100%; }
+
+.tag {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  padding: 0.02rem 0.32rem 0.04rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--person) 16%, transparent);
+  color: var(--person);
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  flex: none;
+}
+
+.tag .act { font-family: "Noto Serif SC", "Songti SC", serif; font-size: 0.82rem; }
+
+.marks {
+  display: inline;
+  color: var(--person);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.marks span { margin-right: 0.2rem; }
+
+.seats .does { color: var(--person); }
+
+.speak-page h1 { font-size: 1.7rem; max-width: 14em; }
+
+.speak-page > p {
+  max-width: 36em;
+  margin: 0.45rem 0 1.4rem;
+  color: var(--quiet);
+  font-size: 0.95rem;
+}
+
+.speech {
+  display: grid;
+  gap: 1.8rem;
+}
+
+.speech-block-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+  margin-bottom: 0.55rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.speech-block-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.speech-block-note {
+  margin: 0;
+  color: var(--missing);
+  font-size: 0.88rem;
+}
+
+.speech-beats {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.speech-beat {
+  display: grid;
+  grid-template-columns: 7.2rem minmax(0, 1fr);
+  gap: 0.35rem 1.1rem;
+  align-items: start;
+}
+
+.speech-meta {
+  display: grid;
+  gap: 0.28rem;
+  padding-top: 0.12rem;
+}
+
+.speech-meta time,
+.speech-time-gap {
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.55rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--tower);
+}
+
+.speech-time-gap {
+  display: block;
+  min-height: 1.55rem;
+}
+
+.speech-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.45rem;
+}
+
+.speech-hint {
+  color: var(--quiet);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.speech-body {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.speech-say {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.55rem;
+  margin: 0;
+  max-width: 42em;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.speech-say .words {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.speech-note {
+  margin: 0;
+  max-width: 42em;
+  padding-left: 0.55rem;
+  border-left: 2px solid var(--line);
+  color: var(--quiet);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.speech-slot {
+  margin: 0;
+  max-width: 42em;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  color: var(--glass);
+  line-height: 1.4;
+}
+
+@media (max-width: 1100px) {
+  .sheet { columns: 2; }
+}
+
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
+    padding: 0.6rem 0.6rem 2rem;
+  }
+
+  .rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0;
+  }
+
+  .rail button {
+    font-size: 1.35rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .rail button.on { box-shadow: inset 0 -3px 0 var(--glass); }
+  .rail button.theme { margin-top: 0; margin-left: auto; }
+
+  .part-tabs button { font-size: 1.12rem; padding: 0.18rem 0.4rem 0.28rem; }
+  .sheet { columns: 1; }
+
+  .roster label {
+    grid-template-columns: 1rem 4.6rem minmax(0, 1fr);
+  }
+
+  .roster .reach { grid-column: 2 / -1; }
+
+  .speech-beat {
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
+  }
+
+  .speech-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.7rem;
+  }
+
+  .speech-meta time { font-size: 1.35rem; }
+
+  .speech-time-gap { display: none; }
+
+  main { padding: 1.3rem 1rem 1.8rem; }
+  h1 { font-size: 1.7rem; }
+  article > ul li { grid-template-columns: 1fr; gap: 0.08rem; }
+}
+
+.shell.phone {
+  display: block;
+  min-height: 100vh;
+  padding: 0 0.45rem 1.5rem;
+  background: var(--daylight);
+}
+
+.phone-nav {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  margin: 0 -0.45rem;
+  padding: 0 0.15rem;
+  background: var(--daylight);
+  border-bottom: 1px solid var(--line);
+}
+
+.phone-nav button {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: "ZCOOL XiaoWei", "Noto Serif SC", serif;
+  font-size: 1.02rem;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  color: var(--rail);
+  padding: 0.72rem 0.05rem 0.48rem;
+  box-shadow: inset 0 -2px 0 transparent;
+}
+
+.phone-nav button[aria-selected="true"] {
+  color: var(--tower);
+  box-shadow: inset 0 -2px 0 var(--glass);
+}
+
+.phone-nav button:focus-visible {
+  outline: 2px solid var(--glass);
+  outline-offset: -2px;
+}
+
+.shell.phone main {
+  padding: 0.75rem 0.85rem 1.3rem;
+}
+
+.shell.phone .cue-head {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.06rem;
+}
+
+.shell.phone .cue time {
+  font-size: 1.28rem;
+}
+
+.shell.phone .cue h3 {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.02rem;
+  font-size: 1.12rem;
+}
+
+.shell.phone .cue .place {
+  margin-left: 0;
+}
+
+.shell.phone .seats {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.38rem;
+}
+
+.shell.phone .seats li {
+  flex-basis: auto;
+}
+
+.crew {
+  margin: 0.4rem 0 0;
+  color: var(--quiet);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.shell.phone .speech-say {
+  font-size: 1.12rem;
+  line-height: 1.85;
+}
+
+.shell.phone .speech-slot {
+  margin: 0.85rem 0;
+}
+
+.shell.phone .speech-block-head {
+  position: sticky;
+  top: 2.5rem;
+  z-index: 1;
+  background: var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-host * { animation: none !important; transition: none !important; }
+  .prep.pack .mark { transition: none; }
+}
