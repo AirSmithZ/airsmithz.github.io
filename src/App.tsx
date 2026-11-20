@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from "react"
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type TransitionEvent } from "react"
 import { HBar } from "./Chart"
 import { Ledger } from "./Ledger"
 import { CallSheet, dayParts } from "./CallSheet"
@@ -279,9 +279,51 @@ function Speak({ bare = false, editable = false }: { bare?: boolean; editable?: 
   )
 }
 
+function reducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+function swipeTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest("textarea, input, button, a, label"))
+}
+
 function Phone() {
   const [section, setSection] = useState<PhoneSection>("前一天")
+  const [shift, setShift] = useState(0)
+  const [moving, setMoving] = useState(false)
   const order: PhoneSection[] = [...phoneParts.map((item) => item.id), "speak"]
+  const mainRef = useRef<HTMLElement>(null)
+  const sectionRef = useRef(section)
+  const pending = useRef<PhoneSection | null>(null)
+  const focusAfter = useRef(false)
+  const gesture = useRef<{ id: number; x: number; y: number; axis: "x" | "y" | null } | null>(null)
+  sectionRef.current = section
+
+  function sheetWidth() {
+    return mainRef.current?.clientWidth || 320
+  }
+
+  function land(next: PhoneSection) {
+    pending.current = null
+    setMoving(false)
+    setShift(0)
+    setSection(next)
+    if (focusAfter.current) document.getElementById(`phone-${next}`)?.focus()
+    focusAfter.current = false
+  }
+
+  function go(next: PhoneSection, focus = false) {
+    if (next === sectionRef.current || pending.current) return
+    focusAfter.current = focus
+    if (reducedMotion()) {
+      land(next)
+      return
+    }
+    const dir = order.indexOf(next) > order.indexOf(sectionRef.current) ? -1 : 1
+    pending.current = next
+    setMoving(true)
+    setShift(dir * sheetWidth())
+  }
 
   function move(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
@@ -289,9 +331,82 @@ function Phone() {
     const index = order.indexOf(section)
     const step = event.key === "ArrowRight" ? 1 : -1
     const next = order[(index + step + order.length) % order.length]
-    setSection(next)
-    document.getElementById(`phone-${next}`)?.focus()
+    go(next, true)
   }
+
+  function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
+    if (pending.current || swipeTarget(event.target)) return
+    if (event.pointerType === "mouse" && event.button !== 0) return
+    gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: null }
+  }
+
+  function onPointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const current = gesture.current
+    if (!current || current.id !== event.pointerId) return
+    const dx = event.clientX - current.x
+    const dy = event.clientY - current.y
+    if (!current.axis) {
+      if (Math.hypot(dx, dy) < 10) return
+      current.axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? "x" : "y"
+      if (current.axis === "y") {
+        gesture.current = null
+        return
+      }
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }
+    const index = order.indexOf(sectionRef.current)
+    let x = dx
+    if ((index <= 0 && x > 0) || (index >= order.length - 1 && x < 0)) x *= 0.32
+    setMoving(false)
+    setShift(x)
+  }
+
+  function onPointerUp(event: ReactPointerEvent<HTMLElement>) {
+    const current = gesture.current
+    if (!current || current.id !== event.pointerId) return
+    gesture.current = null
+    if (current.axis !== "x") {
+      setShift(0)
+      return
+    }
+    const dx = event.clientX - current.x
+    const index = order.indexOf(sectionRef.current)
+    const width = sheetWidth()
+    const commit = Math.abs(dx) > Math.min(72, width * 0.18)
+    const next = commit && dx < 0 && index < order.length - 1
+      ? order[index + 1]
+      : commit && dx > 0 && index > 0
+        ? order[index - 1]
+        : null
+    if (next && reducedMotion()) {
+      land(next)
+      return
+    }
+    if (next) {
+      pending.current = next
+      setMoving(true)
+      setShift(dx < 0 ? -width : width)
+      return
+    }
+    pending.current = null
+    setMoving(true)
+    setShift(0)
+  }
+
+  function onTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget || event.propertyName !== "transform") return
+    const next = pending.current
+    if (!next) return
+    land(next)
+  }
+
+  useEffect(() => {
+    if (!moving || !pending.current) return
+    const timer = window.setTimeout(() => {
+      if (pending.current) land(pending.current)
+    }, 320)
+    return () => window.clearTimeout(timer)
+  }, [moving, shift])
 
   return (
     <div className="shell phone">
@@ -306,7 +421,7 @@ function Phone() {
               role="tab"
               tabIndex={selected ? 0 : -1}
               type="button"
-              onClick={() => setSection(item.id)}
+              onClick={() => go(item.id)}
             >
               {item.label}
             </button>
@@ -318,34 +433,46 @@ function Phone() {
           role="tab"
           tabIndex={section === "speak" ? 0 : -1}
           type="button"
-          onClick={() => setSection("speak")}
+          onClick={() => go("speak")}
         >
           发言
         </button>
       </nav>
-      <main>
-        {section === "speak" ? (
-          <Speak bare editable />
-        ) : (
-          <article className="day">
-            <CallSheet
-              activePart={section}
-              compact
-              idPrefix="phone-sheet"
-              nodes={callNodes}
-              parts={phoneParts}
-              people={peopleConfirm}
-              prep={prepItems}
-              showTabs={false}
-              storage={{
-                people: "wedding-people-checked",
-                prep: "wedding-prep-checked",
-                tasks: "wedding-open-tasks",
-              }}
-              tasks={openTasks}
-            />
-          </article>
-        )}
+      <main
+        ref={mainRef}
+        onPointerCancel={onPointerUp}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        <div
+          className={moving ? "phone-sheet turn" : "phone-sheet"}
+          onTransitionEnd={onTransitionEnd}
+          style={shift ? { transform: `translate3d(${shift}px, 0, 0)` } : undefined}
+        >
+          {section === "speak" ? (
+            <Speak bare editable />
+          ) : (
+            <article className="day">
+              <CallSheet
+                activePart={section}
+                compact
+                idPrefix="phone-sheet"
+                nodes={callNodes}
+                parts={phoneParts}
+                people={peopleConfirm}
+                prep={prepItems}
+                showTabs={false}
+                storage={{
+                  people: "wedding-people-checked",
+                  prep: "wedding-prep-checked",
+                  tasks: "wedding-open-tasks",
+                }}
+                tasks={openTasks}
+              />
+            </article>
+          )}
+        </div>
       </main>
     </div>
   )
