@@ -240,25 +240,29 @@ export function CallSheet({
                 data-part={node.part === "前一天" ? "eve" : undefined}
                 key={node.id}
               >
-                <header className="cue-head">
+                <header className={node.music ? "cue-head scored" : "cue-head"}>
                   <time dateTime={node.time}>
                     {node.time}
                     {node.until ? <span>–{node.until}</span> : null}
                     {node.inferred ? <span className="guess">推算</span> : null}
                   </time>
+                  {node.music ? <p className="tune">{node.music.title}</p> : null}
                   <h3>
                     {node.title}
                     <span className="place">{node.place}</span>
                   </h3>
-                  {node.speak?.map((item) => (
-                    <span className="tag" key={`${item.who}${item.act}`} style={personStyle(item.tone)}>
-                      {item.who}
-                      <span className="act">{item.act}</span>
-                    </span>
-                  ))}
+                  {node.speak?.length ? (
+                    <div className="cue-speak">
+                      {node.speak.map((item) => (
+                        <span className="tag" key={`${item.who}${item.act}`} style={personStyle(item.tone)}>
+                          {item.who}
+                          <span className="act">{item.act}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </header>
                 <div className="cue-body">
-                  {node.music ? <p className="track">{node.music.title}</p> : null}
                   {node.note ? <p className="note">{node.note}</p> : null}
                   {node.watch?.map((line) => (
                     <p className="watch" key={line}>{line}</p>

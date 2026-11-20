@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type TransitionEvent } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type TransitionEvent } from "react"
 import { HBar } from "./Chart"
 import { Ledger } from "./Ledger"
 import { CallSheet, dayParts } from "./CallSheet"
@@ -279,6 +279,32 @@ function Speak({ bare = false, editable = false }: { bare?: boolean; editable?: 
   )
 }
 
+type PhoneSides = { prev: PhoneSection | null; next: PhoneSection | null }
+
+function PhoneSheet({ id }: { id: PhoneSection }) {
+  if (id === "speak") return <Speak bare editable />
+  return (
+    <article className="day">
+      <CallSheet
+        activePart={id}
+        compact
+        idPrefix={`phone-sheet-${id}`}
+        nodes={callNodes}
+        parts={phoneParts}
+        people={peopleConfirm}
+        prep={prepItems}
+        showTabs={false}
+        storage={{
+          people: "wedding-people-checked",
+          prep: "wedding-prep-checked",
+          tasks: "wedding-open-tasks",
+        }}
+        tasks={openTasks}
+      />
+    </article>
+  )
+}
+
 function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
 }
@@ -291,20 +317,34 @@ function Phone() {
   const [section, setSection] = useState<PhoneSection>("前一天")
   const [shift, setShift] = useState(0)
   const [moving, setMoving] = useState(false)
+  const [sides, setSides] = useState<PhoneSides | null>(null)
   const order: PhoneSection[] = [...phoneParts.map((item) => item.id), "speak"]
   const mainRef = useRef<HTMLElement>(null)
   const sectionRef = useRef(section)
   const pending = useRef<PhoneSection | null>(null)
   const focusAfter = useRef(false)
+  const trackOn = useRef(false)
+  const glide = useRef<number | null>(null)
   const gesture = useRef<{ id: number; x: number; y: number; axis: "x" | "y" | null } | null>(null)
   sectionRef.current = section
 
   function sheetWidth() {
-    return mainRef.current?.clientWidth || 320
+    const el = mainRef.current
+    if (!el) return 320
+    const style = getComputedStyle(el)
+    return el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+  }
+
+  function neighbors(id: PhoneSection): PhoneSides {
+    const index = order.indexOf(id)
+    return { prev: order[index - 1] ?? null, next: order[index + 1] ?? null }
   }
 
   function land(next: PhoneSection) {
     pending.current = null
+    trackOn.current = false
+    glide.current = null
+    setSides(null)
     setMoving(false)
     setShift(0)
     setSection(next)
@@ -312,18 +352,39 @@ function Phone() {
     focusAfter.current = false
   }
 
-  function go(next: PhoneSection, focus = false) {
+  function settle() {
+    trackOn.current = false
+    setSides(null)
+    setMoving(false)
+    setShift(0)
+  }
+
+  function go(next: PhoneSection, focus = false, forward?: boolean) {
     if (next === sectionRef.current || pending.current) return
     focusAfter.current = focus
     if (reducedMotion()) {
       land(next)
       return
     }
-    const dir = order.indexOf(next) > order.indexOf(sectionRef.current) ? -1 : 1
+    const ahead = forward ?? order.indexOf(next) > order.indexOf(sectionRef.current)
     pending.current = next
-    setMoving(true)
-    setShift(dir * sheetWidth())
+    trackOn.current = true
+    glide.current = (ahead ? -1 : 1) * sheetWidth()
+    setMoving(false)
+    setShift(0)
+    setSides(ahead ? { prev: null, next } : { prev: next, next: null })
   }
+
+  useLayoutEffect(() => {
+    const to = glide.current
+    if (to == null) return
+    const frame = requestAnimationFrame(() => {
+      glide.current = null
+      setMoving(true)
+      setShift(to)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [sides])
 
   function move(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return
@@ -331,7 +392,7 @@ function Phone() {
     const index = order.indexOf(section)
     const step = event.key === "ArrowRight" ? 1 : -1
     const next = order[(index + step + order.length) % order.length]
-    go(next, true)
+    go(next, true, step > 0)
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
@@ -354,6 +415,10 @@ function Phone() {
       }
       event.currentTarget.setPointerCapture(event.pointerId)
     }
+    if (!trackOn.current) {
+      trackOn.current = true
+      setSides(neighbors(sectionRef.current))
+    }
     const index = order.indexOf(sectionRef.current)
     let x = dx
     if ((index <= 0 && x > 0) || (index >= order.length - 1 && x < 0)) x *= 0.32
@@ -366,7 +431,7 @@ function Phone() {
     if (!current || current.id !== event.pointerId) return
     gesture.current = null
     if (current.axis !== "x") {
-      setShift(0)
+      if (trackOn.current) settle()
       return
     }
     const dx = event.clientX - current.x
@@ -388,6 +453,10 @@ function Phone() {
       setShift(dx < 0 ? -width : width)
       return
     }
+    if (reducedMotion() || Math.abs(dx) < 2) {
+      settle()
+      return
+    }
     pending.current = null
     setMoving(true)
     setShift(0)
@@ -396,8 +465,11 @@ function Phone() {
   function onTransitionEnd(event: TransitionEvent<HTMLDivElement>) {
     if (event.target !== event.currentTarget || event.propertyName !== "transform") return
     const next = pending.current
-    if (!next) return
-    land(next)
+    if (next) {
+      land(next)
+      return
+    }
+    settle()
   }
 
   useEffect(() => {
@@ -445,34 +517,19 @@ function Phone() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        <div
-          className={moving ? "phone-sheet turn" : "phone-sheet"}
-          onTransitionEnd={onTransitionEnd}
-          style={shift ? { transform: `translate3d(${shift}px, 0, 0)` } : undefined}
-        >
-          {section === "speak" ? (
-            <Speak bare editable />
-          ) : (
-            <article className="day">
-              <CallSheet
-                activePart={section}
-                compact
-                idPrefix="phone-sheet"
-                nodes={callNodes}
-                parts={phoneParts}
-                people={peopleConfirm}
-                prep={prepItems}
-                showTabs={false}
-                storage={{
-                  people: "wedding-people-checked",
-                  prep: "wedding-prep-checked",
-                  tasks: "wedding-open-tasks",
-                }}
-                tasks={openTasks}
-              />
-            </article>
-          )}
-        </div>
+        {sides ? (
+          <div
+            className={moving ? "phone-track turn" : "phone-track"}
+            onTransitionEnd={onTransitionEnd}
+            style={{ transform: `translate3d(calc(-100% / 3 + ${shift}px), 0, 0)` }}
+          >
+            <div className="phone-pane">{sides.prev ? <PhoneSheet id={sides.prev} /> : null}</div>
+            <div className="phone-pane"><PhoneSheet id={section} /></div>
+            <div className="phone-pane">{sides.next ? <PhoneSheet id={sides.next} /> : null}</div>
+          </div>
+        ) : (
+          <PhoneSheet id={section} />
+        )}
       </main>
     </div>
   )
